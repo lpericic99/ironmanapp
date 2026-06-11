@@ -1605,9 +1605,18 @@ function useNotificationChecker(currentWeek) {
 
 // ─── ROOT ─────────────────────────────────────────────────────────────────────
 
+// Week calculation from training start date
+const TRAINING_START = new Date("2026-06-08"); // Monday of week 1
+function getCurrentTrainingWeek() {
+  const now = new Date();
+  const diff = now - TRAINING_START;
+  const week = Math.floor(diff / (1000*60*60*24*7)) + 1;
+  return Math.min(63, Math.max(1, week));
+}
+
 export default function App() {
   const [tab, setTab]                 = useState("today");
-  const [currentWeek, setCurrentWeek] = useState(()=>LS.get("im_current_week")||1);
+  const [currentWeek, setCurrentWeek] = useState(()=>LS.get("im_current_week")||getCurrentTrainingWeek());
   const [prShow, setPrShow]           = useState(false);
   const [prExercise, setPrExercise]   = useState("");
   const [prKg, setPrKg]               = useState(0);
@@ -1615,7 +1624,13 @@ export default function App() {
   useEffect(()=>{ LS.set("im_current_week", currentWeek); },[currentWeek]);
   useNotificationChecker(currentWeek);
 
-  // PR detection — wrap setLogs in TodayView calls this via window event
+  // Reset to actual current week when switching to Today tab
+  const handleTabChange = (newTab) => {
+    if(newTab === "today") setCurrentWeek(getCurrentTrainingWeek());
+    setTab(newTab);
+  };
+
+  // PR detection
   useEffect(()=>{
     const handler = (e)=>{ setPrExercise(e.detail.exercise); setPrKg(e.detail.kg); setPrShow(true); };
     window.addEventListener("ironman_pr", handler);
@@ -1630,7 +1645,7 @@ export default function App() {
       {tab==="progress" && <ProgressView currentWeek={currentWeek} StreakBadge={StreakBadge} StrengthGraphs={StrengthGraphs} RecoveryTracker={RecoveryTracker} RaceCountdown={RaceCountdown}/>}
       {tab==="race"     && <PreRaceChecklist currentWeek={currentWeek}/>}
       {tab==="notif"    && <NotificationsView/>}
-      <BottomNav tab={tab} setTab={setTab}/>
+      <BottomNav tab={tab} setTab={handleTabChange}/>
     </div>
   );
 }
