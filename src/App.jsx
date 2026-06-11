@@ -736,6 +736,9 @@ function WeekView({ currentWeek, setCurrentWeek }) {
   const schedule = WEEK_SCHEDULES[getSchedKey(currentWeek)];
   const [expanded, setExpanded] = useState(null);
   const [completed, setCompleted] = useState({});
+  const realWeek = getCurrentTrainingWeek();
+  const isFuture = currentWeek > realWeek;
+  const isPast   = currentWeek < realWeek;
 
   useEffect(() => {
     const map = {};
@@ -748,7 +751,8 @@ function WeekView({ currentWeek, setCurrentWeek }) {
   }, [currentWeek]);
 
   const nonRest = schedule.filter(s=>s.type!=="rest");
-  const doneCount = nonRest.filter(s=>completed[s.id]).length;
+  // Only count dots for current/past weeks — future weeks show empty dots
+  const doneCount = isFuture ? 0 : nonRest.filter(s=>completed[s.id]).length;
 
   return (
     <div style={{paddingBottom:90}}>
@@ -756,7 +760,12 @@ function WeekView({ currentWeek, setCurrentWeek }) {
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
           <div>
             <div style={{fontSize:11,color:phase.color,letterSpacing:2,textTransform:"uppercase",marginBottom:4}}>Phase {phase.id} · {phase.range}</div>
-            <div style={{fontSize:24,fontWeight:800}}>Week {currentWeek}</div>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <div style={{fontSize:24,fontWeight:800}}>Week {currentWeek}</div>
+              {isFuture && <span style={{background:"#1e293b",border:"1px solid #334155",borderRadius:20,padding:"2px 10px",fontSize:11,color:"#475569"}}>Preview</span>}
+              {currentWeek===realWeek && <span style={{background:"rgba(124,58,237,0.2)",border:"1px solid #7c3aed",borderRadius:20,padding:"2px 10px",fontSize:11,color:"#c084fc"}}>Current</span>}
+              {isPast && <span style={{background:"rgba(16,185,129,0.1)",border:"1px solid #059669",borderRadius:20,padding:"2px 10px",fontSize:11,color:"#86efac"}}>Past</span>}
+            </div>
           </div>
           <div style={{display:"flex",gap:6,marginTop:4}}>
             <button onClick={()=>setCurrentWeek(w=>Math.max(1,w-1))} style={{background:"#1e293b",border:"none",color:"#94a3b8",borderRadius:8,width:36,height:36,cursor:"pointer",fontSize:20,display:"flex",alignItems:"center",justifyContent:"center"}}>‹</button>
@@ -764,23 +773,33 @@ function WeekView({ currentWeek, setCurrentWeek }) {
           </div>
         </div>
         <div style={{marginTop:12,background:"rgba(0,0,0,0.3)",borderRadius:10,padding:"10px 14px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <span style={{fontSize:13,color:"#94a3b8"}}>{doneCount}/{nonRest.length} sessions completed</span>
+          <span style={{fontSize:13,color:"#94a3b8"}}>
+            {isFuture ? `Upcoming — ${nonRest.length} sessions planned` : `${doneCount}/${nonRest.length} sessions completed`}
+          </span>
           <div style={{display:"flex",gap:4}}>
             {nonRest.map(s=>(
-              <div key={s.id} style={{width:10,height:10,borderRadius:"50%",background:completed[s.id]?phase.color:"#1e293b",border:`1px solid ${completed[s.id]?phase.color:"#334155"}`}}/>
+              <div key={s.id} style={{width:10,height:10,borderRadius:"50%",
+                background: isFuture ? "#1e293b" : completed[s.id] ? phase.color : "#1e293b",
+                border:`1px solid ${isFuture ? "#334155" : completed[s.id] ? phase.color : "#334155"}`
+              }}/>
             ))}
           </div>
         </div>
+        {isFuture && (
+          <div style={{marginTop:8,background:"rgba(71,85,105,0.2)",borderRadius:8,padding:"7px 12px",fontSize:11,color:"#475569",textAlign:"center"}}>
+            👀 Preview mode — you can browse but not log future weeks
+          </div>
+        )}
       </div>
 
       <div style={{padding:"12px 16px",display:"flex",flexDirection:"column",gap:8}}>
         {schedule.map((s,i) => {
           const st = TYPE_STYLE[s.type]||TYPE_STYLE.rest;
           const isOpen = expanded===i;
-          const isDone = completed[s.id];
+          const isDone = !isFuture && completed[s.id];
           return (
             <div key={i} onClick={()=>setExpanded(isOpen?null:i)}
-              style={{background:isOpen?st.bg:"rgba(255,255,255,0.03)",border:`1px solid ${isOpen?st.border:"#1e293b"}`,borderRadius:12,padding:"12px 14px",cursor:"pointer",transition:"all 0.2s"}}>
+              style={{background:isOpen?st.bg:"rgba(255,255,255,0.03)",border:`1px solid ${isOpen?st.border:"#1e293b"}`,borderRadius:12,padding:"12px 14px",cursor:"pointer",transition:"all 0.2s",opacity:isFuture?0.7:1}}>
               <div style={{display:"flex",alignItems:"center",gap:10}}>
                 <span style={{fontSize:22,width:30,textAlign:"center"}}>{s.icon}</span>
                 <div style={{flex:1}}>
@@ -810,7 +829,9 @@ function WeekView({ currentWeek, setCurrentWeek }) {
                       {s.cardio.note && <div style={{fontSize:11,color:"#64748b",marginTop:3}}>{s.cardio.note}</div>}
                     </div>
                   )}
-                  <div style={{marginTop:10,fontSize:12,color:"#475569",textAlign:"center"}}>Log this session in the Today tab</div>
+                  <div style={{marginTop:10,fontSize:12,color:isFuture?"#334155":"#475569",textAlign:"center"}}>
+                    {isFuture ? "🔒 Log opens when this week arrives" : "Log this session in the Today tab"}
+                  </div>
                 </div>
               )}
             </div>
@@ -1240,29 +1261,31 @@ function RecoveryTracker({ currentWeek }) {
 // ─── STREAK COUNTER ───────────────────────────────────────────────────────────
 
 function StreakBadge({ currentWeek }) {
-  const sched = WEEK_SCHEDULES[currentWeek<=8?"1-8":currentWeek<=16?"9-16":currentWeek<=28?"17-28":currentWeek<=36?"29-36":currentWeek<=56?"37-56":"57-63"];
+  // Always show stats for the REAL current training week, not whatever week is being browsed
+  const realWeek = getCurrentTrainingWeek();
+  const sched = WEEK_SCHEDULES[realWeek<=8?"1-8":realWeek<=16?"9-16":realWeek<=28?"17-28":realWeek<=36?"29-36":realWeek<=56?"37-56":"57-63"];
   const nonRest = sched.filter(s=>s.type!=="rest");
-  const done = nonRest.filter(s=>LS.get(sessionKey(currentWeek,s.id))?.done).length;
+  const done = nonRest.filter(s=>LS.get(sessionKey(realWeek,s.id))?.done).length;
   const travelDone = nonRest.filter(s=>{
-    const tkey=`im_travel_${currentWeek}_${s.day}`;
+    const tkey=`im_travel_${realWeek}_${s.day}`;
     const t=LS.get(tkey);
     return t&&(t.travelMode==="alternative"||t.travelMode==="custom"||t.travelMode==="postpone");
   }).length;
   const effective = Math.min(nonRest.length, done + travelDone);
 
-  // Calculate streak across weeks
+  // Streak counts only past weeks that are fully in the past
   let streak = 0;
-  for(let w=currentWeek; w>=1; w--) {
+  for(let w=realWeek; w>=1; w--) {
     const sc = WEEK_SCHEDULES[w<=8?"1-8":w<=16?"9-16":w<=28?"17-28":w<=36?"29-36":w<=56?"37-56":"57-63"];
     const nr = sc.filter(s=>s.type!=="rest");
     const d  = nr.filter(s=>LS.get(sessionKey(w,s.id))?.done).length;
-    if(d >= Math.ceil(nr.length*0.6)) streak++; else if(w<currentWeek) break;
+    if(d >= Math.ceil(nr.length*0.6)) streak++; else if(w<realWeek) break;
   }
 
   return (
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
       <div style={{background:"rgba(37,99,235,0.1)",border:"1px solid #1d4ed8",borderRadius:12,padding:"12px 14px",textAlign:"center"}}>
-        <div style={{fontSize:10,color:"#3b82f6",letterSpacing:1,textTransform:"uppercase",marginBottom:4}}>This week</div>
+        <div style={{fontSize:10,color:"#3b82f6",letterSpacing:1,textTransform:"uppercase",marginBottom:4}}>Week {realWeek}</div>
         <div style={{fontSize:26,fontWeight:800,color:"#93c5fd"}}>{effective}<span style={{fontSize:14,color:"#475569",fontWeight:400}}>/{nonRest.length}</span></div>
         <div style={{fontSize:10,color:"#1d4ed8",marginTop:2}}>sessions done</div>
         <div style={{background:"#1e293b",borderRadius:3,height:4,overflow:"hidden",marginTop:8}}>
