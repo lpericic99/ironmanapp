@@ -802,17 +802,17 @@ function TodayView({ currentWeek, setCurrentWeek, onPR }) {
                 <div style={{background:"rgba(0,0,0,0.3)",borderRadius:10,padding:12}}>
                   <div style={{fontSize:10,color:style.text,letterSpacing:1.5,textTransform:"uppercase",marginBottom:8}}>Cardio / Endurance</div>
                   {ts.cardio.note && <div style={{fontSize:12,color:"#64748b",marginBottom:8}}>{ts.cardio.note}</div>}
-                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <div style={{position:"relative"}}>
                     <input
                       type="number" inputMode="decimal"
                       placeholder={ts.cardio.placeholder}
                       value={cardioVal}
                       onChange={e=>setCardioVal(e.target.value)}
-                      style={{flex:1,background:"rgba(255,255,255,0.08)",border:`1px solid ${style.border}`,borderRadius:9,padding:"12px",color:"#e2e8f0",fontSize:22,fontWeight:800,textAlign:"center"}}
+                      style={{width:"100%",boxSizing:"border-box",background:"rgba(255,255,255,0.08)",border:`1px solid ${style.border}`,borderRadius:9,padding:"12px 56px 12px 12px",color:"#e2e8f0",fontSize:22,fontWeight:800,textAlign:"center"}}
                     />
-                    <div style={{textAlign:"center"}}>
-                      <div style={{fontSize:16,color:style.text,fontWeight:700}}>{ts.cardio.unit}</div>
-                      <div style={{fontSize:10,color:"#475569",marginTop:2}}>{ts.cardio.label}</div>
+                    <div style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",textAlign:"center",pointerEvents:"none"}}>
+                      <div style={{fontSize:13,color:style.text,fontWeight:700,lineHeight:1}}>{ts.cardio.unit}</div>
+                      <div style={{fontSize:9,color:"#475569",marginTop:2,whiteSpace:"nowrap"}}>{ts.cardio.label}</div>
                     </div>
                   </div>
                 </div>
@@ -820,6 +820,8 @@ function TodayView({ currentWeek, setCurrentWeek, onPR }) {
             </div>
 
             {/* Notes */}
+            {skey && <RPELogger sessionKey={skey} />}
+            {skey && <WeatherLog sessionKeyStr={skey} />}
             <textarea
               value={notes}
               onChange={e=>setNotes(e.target.value)}
@@ -991,6 +993,8 @@ function ProgressView({ currentWeek, StreakBadge: SB, StrengthGraphs: SG, Recove
       <div style={{padding:"14px 16px",display:"flex",flexDirection:"column",gap:14}}>
         {RC && <RC/>}
         {SB && <SB currentWeek={currentWeek}/>}
+        <MilestoneCountdown currentWeek={currentWeek}/>
+        <TrainingLoad currentWeek={currentWeek}/>
         {RT && <RT currentWeek={currentWeek}/>}
         {SG && <SG/>}
         {/* Weight */}
@@ -2146,12 +2150,14 @@ function RetroactiveLog({ currentWeek, onClose }) {
               {ts.cardio && (
                 <div style={{background:"rgba(0,0,0,0.3)",borderRadius:9,padding:12,marginBottom:8}}>
                   <div style={{fontSize:10,color:style.text,letterSpacing:1.5,textTransform:"uppercase",marginBottom:8}}>{ts.cardio.label}</div>
-                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <div style={{position:"relative"}}>
                     <input type="number" inputMode="decimal" placeholder={ts.cardio.placeholder}
                       value={cardioVal} onChange={e=>setCardioVal(e.target.value)}
-                      style={{flex:1,background:"rgba(255,255,255,0.08)",border:`1px solid ${style.border}`,borderRadius:9,padding:"12px",color:"#e2e8f0",fontSize:22,fontWeight:800,textAlign:"center"}}
+                      style={{width:"100%",boxSizing:"border-box",background:"rgba(255,255,255,0.08)",border:`1px solid ${style.border}`,borderRadius:9,padding:"12px 56px 12px 12px",color:"#e2e8f0",fontSize:22,fontWeight:800,textAlign:"center"}}
                     />
-                    <span style={{fontSize:14,color:style.text,fontWeight:700}}>{ts.cardio.unit}</span>
+                    <div style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",pointerEvents:"none"}}>
+                      <span style={{fontSize:13,color:style.text,fontWeight:700}}>{ts.cardio.unit}</span>
+                    </div>
                   </div>
                 </div>
               )}
@@ -2179,6 +2185,640 @@ function RetroactiveLog({ currentWeek, onClose }) {
   );
 }
 
+// ─── ZONE 2 CALCULATOR ───────────────────────────────────────────────────────
+
+function Zone2Calculator() {
+  const [age,  setAge]  = useState(()=>LS.get("im_z2_age")||"");
+  const [rest, setRest] = useState(()=>LS.get("im_z2_rest")||"");
+  const [max,  setMax]  = useState(()=>LS.get("im_z2_max")||"");
+  const [saved, setSaved] = useState(false);
+
+  const save = () => {
+    LS.set("im_z2_age", age); LS.set("im_z2_rest", rest); LS.set("im_z2_max", max);
+    setSaved(true); setTimeout(()=>setSaved(false), 2000);
+  };
+
+  // Karvonen method: target HR = resting HR + (HRR × intensity%)
+  const hrMax  = max ? parseInt(max) : age ? (220 - parseInt(age)) : null;
+  const hrRest = rest ? parseInt(rest) : null;
+  const hrr    = hrMax && hrRest ? hrMax - hrRest : null;
+
+  const zones = hrr && hrRest ? [
+    { label:"Zone 1 — Recovery",   pct:"50–60%", lo:Math.round(hrRest+hrr*0.50), hi:Math.round(hrRest+hrr*0.60), color:"#22d3ee",  desc:"Very easy. Warm-up, cool-down, active recovery." },
+    { label:"Zone 2 — Base",       pct:"60–70%", lo:Math.round(hrRest+hrr*0.60), hi:Math.round(hrRest+hrr*0.70), color:"#22c55e",  desc:"Conversational pace. 80% of all your bike and run training. Burns fat, builds aerobic engine." },
+    { label:"Zone 3 — Tempo",      pct:"70–80%", lo:Math.round(hrRest+hrr*0.70), hi:Math.round(hrRest+hrr*0.80), color:"#f59e0b",  desc:"Comfortably hard. Threshold runs and harder bike efforts." },
+    { label:"Zone 4 — Threshold",  pct:"80–90%", lo:Math.round(hrRest+hrr*0.80), hi:Math.round(hrRest+hrr*0.90), color:"#f97316",  desc:"Race pace intensity. Intervals and hard brick sessions." },
+    { label:"Zone 5 — Max",        pct:"90–100%",lo:Math.round(hrRest+hrr*0.90), hi:hrMax,                        color:"#ef4444",  desc:"All out. Very short efforts only. Avoid in base phase." },
+  ] : null;
+
+  const z2 = zones?.[1];
+
+  return (
+    <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid #1e293b",borderRadius:14,padding:16,marginBottom:14}}>
+      <div style={{fontWeight:700,fontSize:15,marginBottom:4}}>❤️ Zone 2 Heart Rate</div>
+      <div style={{fontSize:12,color:"#64748b",marginBottom:12}}>Karvonen method — enter your stats for personalised zones</div>
+
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:12}}>
+        {[
+          {label:"Age",       val:age,  set:setAge,  ph:"27",   note:"years"},
+          {label:"Resting HR",val:rest, set:setRest, ph:"58",   note:"bpm (morning)"},
+          {label:"Max HR",    val:max,  set:setMax,  ph:"auto", note:"leave blank to auto"},
+        ].map((f,i)=>(
+          <div key={i}>
+            <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{f.label}</div>
+            <input type="number" inputMode="numeric" placeholder={f.ph} value={f.val}
+              onChange={e=>f.set(e.target.value)}
+              style={{width:"100%",boxSizing:"border-box",background:"rgba(255,255,255,0.06)",border:"1px solid #334155",borderRadius:8,padding:"8px",color:"#e2e8f0",fontSize:15,fontWeight:700,textAlign:"center"}}
+            />
+            <div style={{fontSize:9,color:"#334155",marginTop:2,textAlign:"center"}}>{f.note}</div>
+          </div>
+        ))}
+      </div>
+
+      <button onClick={save} style={{width:"100%",background:saved?"#14532d":"#7c3aed",border:saved?"1px solid #16a34a":"none",borderRadius:9,padding:"10px",color:saved?"#86efac":"#fff",fontWeight:700,fontSize:13,cursor:"pointer",marginBottom:14}}>
+        {saved?"✓ Saved!":"Calculate My Zones"}
+      </button>
+
+      {z2 && (
+        <>
+          {/* Zone 2 highlight */}
+          <div style={{background:"rgba(34,197,94,0.15)",border:"2px solid #22c55e",borderRadius:12,padding:"12px 14px",marginBottom:10}}>
+            <div style={{fontSize:11,color:"#22c55e",letterSpacing:1,textTransform:"uppercase",marginBottom:4}}>Your Zone 2 — use for 80% of training</div>
+            <div style={{fontSize:32,fontWeight:800,color:"#86efac",letterSpacing:-1}}>{z2.lo}–{z2.hi} <span style={{fontSize:16,fontWeight:400,color:"#4ade80"}}>bpm</span></div>
+            <div style={{fontSize:12,color:"#64748b",marginTop:4}}>{z2.desc}</div>
+          </div>
+
+          {/* All zones */}
+          <div style={{display:"flex",flexDirection:"column",gap:6}}>
+            {zones.map((z,i)=>(
+              <div key={i} style={{display:"flex",alignItems:"center",gap:10,background:"rgba(0,0,0,0.2)",borderRadius:9,padding:"8px 12px",borderLeft:`3px solid ${z.color}`}}>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:12,fontWeight:600,color:z.color}}>{z.label}</div>
+                  <div style={{fontSize:11,color:"#475569",marginTop:1}}>{z.desc}</div>
+                </div>
+                <div style={{textAlign:"right",flexShrink:0}}>
+                  <div style={{fontSize:14,fontWeight:800,color:"#e2e8f0"}}>{z.lo}–{z.hi}</div>
+                  <div style={{fontSize:10,color:"#475569"}}>bpm</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{fontSize:11,color:"#334155",textAlign:"center",marginTop:8}}>Based on Karvonen formula · Max HR: {hrMax}bpm</div>
+        </>
+      )}
+
+      {!zones && (age||rest) && (
+        <div style={{textAlign:"center",color:"#475569",fontSize:13,padding:"8px 0"}}>Enter both age and resting HR to calculate zones</div>
+      )}
+    </div>
+  );
+}
+
+// ─── RPE LOGGER (used inside TodayView save) ─────────────────────────────────
+
+function RPELogger({ sessionKey: skey, onSave }) {
+  const [rpe, setRpe] = useState(()=>{ const d=LS.get(skey); return d?.rpe||0; });
+  const RPE_LABELS = ["","😴 Very Easy","😌 Easy","🙂 Moderate","😐 Somewhat Hard","😤 Hard","😓 Hard+","🥵 Very Hard","😰 Very Hard+","😵 Extremely Hard","💀 Max Effort"];
+  const RPE_COLORS = ["","#22d3ee","#22c55e","#86efac","#fbbf24","#f97316","#fb923c","#ef4444","#dc2626","#b91c1c","#7f1d1d"];
+
+  const save = (val) => {
+    setRpe(val);
+    const existing = LS.get(skey)||{};
+    LS.set(skey, {...existing, rpe:val});
+    onSave && onSave(val);
+  };
+
+  return (
+    <div style={{background:"rgba(0,0,0,0.2)",borderRadius:10,padding:12,marginBottom:12}}>
+      <div style={{fontSize:11,color:"#64748b",letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>How hard was it? (RPE 1–10)</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(10,1fr)",gap:4,marginBottom:8}}>
+        {[1,2,3,4,5,6,7,8,9,10].map(v=>(
+          <button key={v} onClick={()=>save(v)}
+            style={{background:rpe===v?RPE_COLORS[v]:"rgba(255,255,255,0.06)",border:`1px solid ${rpe===v?RPE_COLORS[v]:"#1e293b"}`,borderRadius:6,padding:"8px 0",color:rpe===v?"#fff":"#64748b",fontSize:13,fontWeight:rpe===v?800:400,cursor:"pointer"}}>
+            {v}
+          </button>
+        ))}
+      </div>
+      {rpe>0 && <div style={{fontSize:12,color:RPE_COLORS[rpe],fontWeight:600,textAlign:"center"}}>{RPE_LABELS[rpe]}</div>}
+    </div>
+  );
+}
+
+// ─── TRAINING LOAD ────────────────────────────────────────────────────────────
+
+const SESSION_LOAD = { strength:6, swim:4, bike:5, brick:8, run:5, rest:0 };
+
+function TrainingLoad({ currentWeek }) {
+  const realWeek = getCurrentTrainingWeek();
+
+  // Calculate load for last 8 weeks
+  const weekLoads = [];
+  for(let w=Math.max(1,realWeek-7); w<=realWeek; w++) {
+    const sched = WEEK_SCHEDULES[getSchedKey(w)];
+    let load = 0;
+    sched.forEach(s => {
+      const d = LS.get(sessionKey(w,s.id));
+      if(d?.done) {
+        const base = SESSION_LOAD[s.type]||0;
+        const rpe  = d.rpe||5;
+        load += base * (rpe/5);
+      }
+    });
+    weekLoads.push({ week:w, load:Math.round(load) });
+  }
+
+  const thisWeek = weekLoads[weekLoads.length-1];
+  const prevWeek = weekLoads[weekLoads.length-2];
+  const maxLoad  = Math.max(...weekLoads.map(w=>w.load), 1);
+  const trend    = prevWeek ? thisWeek.load - prevWeek.load : 0;
+
+  const getLevel = (load) => {
+    if(load===0)  return {label:"No load",   color:"#475569"};
+    if(load<15)   return {label:"Easy week",  color:"#22c55e"};
+    if(load<30)   return {label:"Moderate",   color:"#f59e0b"};
+    if(load<45)   return {label:"Hard week",  color:"#f97316"};
+    return              {label:"Peak load",   color:"#ef4444"};
+  };
+
+  const level = getLevel(thisWeek?.load||0);
+
+  return (
+    <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid #1e293b",borderRadius:14,padding:16,marginBottom:14}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
+        <div>
+          <div style={{fontWeight:700,fontSize:15,marginBottom:2}}>⚡ Training Load</div>
+          <div style={{fontSize:11,color:"#64748b"}}>Based on sessions done × RPE</div>
+        </div>
+        <div style={{textAlign:"right"}}>
+          <div style={{fontSize:20,fontWeight:800,color:level.color}}>{level.label}</div>
+          <div style={{fontSize:11,color:"#475569",marginTop:1}}>
+            {trend>0?`↑ +${trend} vs last week`:trend<0?`↓ ${trend} vs last week`:"Same as last week"}
+          </div>
+        </div>
+      </div>
+
+      {/* Bar chart */}
+      <div style={{display:"flex",gap:4,alignItems:"flex-end",height:60,marginBottom:4}}>
+        {weekLoads.map((w,i)=>{
+          const h = maxLoad>0 ? Math.round((w.load/maxLoad)*52)+4 : 4;
+          const isCurrent = w.week===realWeek;
+          return (
+            <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+              <div style={{width:"100%",background:isCurrent?level.color:"#1e3a5f",borderRadius:"3px 3px 0 0",height:h,transition:"height 0.3s"}}/>
+              <div style={{fontSize:8,color:isCurrent?"#e2e8f0":"#334155"}}>W{w.week}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{fontSize:11,color:"#334155",textAlign:"center"}}>Tip: don't increase load more than 10% week-to-week</div>
+    </div>
+  );
+}
+
+// ─── INJURY TRACKER ───────────────────────────────────────────────────────────
+
+const BODY_PARTS = [
+  ["Left shoulder","Right shoulder","Neck"],
+  ["Left knee","Right knee","Lower back"],
+  ["Left hip","Right hip","Upper back"],
+  ["Left calf","Right calf","Left achilles"],
+  ["Right achilles","Left foot","Right foot"],
+];
+
+function InjuryTracker() {
+  const [injuries, setInjuries] = useState(()=>LS.get("im_injuries")||[]);
+  const [showForm, setShowForm] = useState(false);
+  const [part,  setPart]  = useState("");
+  const [sev,   setSev]   = useState(0);
+  const [note,  setNote]  = useState("");
+  const [saved, setSaved] = useState(false);
+
+  const SEV_LABELS = ["","😌 Minor niggle","😐 Noticeable","😟 Affecting training","😰 Can't train properly","🚨 Stop training"];
+  const SEV_COLORS = ["","#22c55e","#f59e0b","#f97316","#ef4444","#7f1d1d"];
+
+  const addInjury = () => {
+    if(!part||!sev) return;
+    const entry = { id:Date.now(), part, sev, note, date:new Date().toLocaleDateString("en",{day:"numeric",month:"short"}), resolved:false };
+    const updated = [entry, ...injuries];
+    setInjuries(updated);
+    LS.set("im_injuries", updated);
+    setPart(""); setSev(0); setNote(""); setShowForm(false);
+    setSaved(true); setTimeout(()=>setSaved(false),2000);
+  };
+
+  const resolve = (id) => {
+    const updated = injuries.map(inj=>inj.id===id?{...inj,resolved:true,resolvedDate:new Date().toLocaleDateString("en",{day:"numeric",month:"short"})}:inj);
+    setInjuries(updated);
+    LS.set("im_injuries", updated);
+  };
+
+  const remove = (id) => {
+    const updated = injuries.filter(inj=>inj.id!==id);
+    setInjuries(updated);
+    LS.set("im_injuries", updated);
+  };
+
+  const active   = injuries.filter(i=>!i.resolved);
+  const resolved = injuries.filter(i=>i.resolved);
+
+  return (
+    <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid #1e293b",borderRadius:14,padding:16,marginBottom:14}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+        <div>
+          <div style={{fontWeight:700,fontSize:15}}>🩹 Injury & Pain Log</div>
+          <div style={{fontSize:11,color:"#64748b",marginTop:1}}>{active.length} active · {resolved.length} resolved</div>
+        </div>
+        <button onClick={()=>setShowForm(!showForm)}
+          style={{background:"#7c3aed",border:"none",borderRadius:8,padding:"7px 14px",color:"#fff",fontWeight:700,fontSize:12,cursor:"pointer"}}>
+          {showForm?"Cancel":"+ Log pain"}
+        </button>
+      </div>
+
+      {showForm && (
+        <div style={{background:"rgba(0,0,0,0.3)",borderRadius:12,padding:14,marginBottom:12}}>
+          <div style={{fontSize:12,color:"#64748b",marginBottom:8}}>Where does it hurt?</div>
+          <div style={{display:"flex",flexDirection:"column",gap:4,marginBottom:12}}>
+            {BODY_PARTS.flat().map(p=>(
+              <button key={p} onClick={()=>setPart(p)}
+                style={{background:part===p?"rgba(239,68,68,0.2)":"rgba(255,255,255,0.04)",border:`1px solid ${part===p?"#ef4444":"#1e293b"}`,borderRadius:8,padding:"8px 12px",color:part===p?"#fca5a5":"#94a3b8",fontSize:13,cursor:"pointer",textAlign:"left"}}>
+                {p} {part===p?"✓":""}
+              </button>
+            ))}
+          </div>
+
+          <div style={{fontSize:12,color:"#64748b",marginBottom:8}}>Severity</div>
+          <div style={{display:"flex",flexDirection:"column",gap:4,marginBottom:12}}>
+            {[1,2,3,4,5].map(v=>(
+              <button key={v} onClick={()=>setSev(v)}
+                style={{background:sev===v?SEV_COLORS[v]+"30":"rgba(255,255,255,0.04)",border:`1px solid ${sev===v?SEV_COLORS[v]:"#1e293b"}`,borderRadius:8,padding:"8px 12px",color:sev===v?SEV_COLORS[v]:"#94a3b8",fontSize:13,cursor:"pointer",textAlign:"left",fontWeight:sev===v?700:400}}>
+                {SEV_LABELS[v]}
+              </button>
+            ))}
+          </div>
+
+          <textarea value={note} onChange={e=>setNote(e.target.value)} placeholder="When does it hurt? After runs? During squats? Sharp or dull?"
+            style={{width:"100%",background:"rgba(255,255,255,0.06)",border:"1px solid #334155",borderRadius:8,padding:"9px 12px",color:"#e2e8f0",fontSize:13,resize:"none",height:64,fontFamily:"inherit",boxSizing:"border-box",marginBottom:10}}
+          />
+
+          <button onClick={addInjury} disabled={!part||!sev}
+            style={{width:"100%",background:(!part||!sev)?"#1e293b":"#ef4444",border:"none",borderRadius:9,padding:"12px",color:(!part||!sev)?"#475569":"#fff",fontWeight:700,fontSize:14,cursor:(!part||!sev)?"default":"pointer"}}>
+            Log Pain
+          </button>
+        </div>
+      )}
+
+      {active.length===0 && !showForm && (
+        <div style={{textAlign:"center",padding:"16px 0",color:"#334155",fontSize:13}}>
+          ✅ No active injuries logged. Keep it that way.
+        </div>
+      )}
+
+      {active.map(inj=>(
+        <div key={inj.id} style={{background:`${SEV_COLORS[inj.sev]}15`,border:`1px solid ${SEV_COLORS[inj.sev]}50`,borderRadius:10,padding:"10px 12px",marginBottom:8}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4}}>
+            <div>
+              <div style={{fontWeight:700,fontSize:14,color:SEV_COLORS[inj.sev]}}>{inj.part}</div>
+              <div style={{fontSize:11,color:"#64748b",marginTop:1}}>{SEV_LABELS[inj.sev]} · {inj.date}</div>
+            </div>
+            <div style={{display:"flex",gap:6}}>
+              <button onClick={()=>resolve(inj.id)} style={{background:"#14532d",border:"1px solid #16a34a",borderRadius:6,padding:"4px 8px",color:"#86efac",fontSize:10,cursor:"pointer",fontWeight:600}}>Resolved</button>
+              <button onClick={()=>remove(inj.id)} style={{background:"rgba(255,255,255,0.04)",border:"1px solid #334155",borderRadius:6,padding:"4px 8px",color:"#64748b",fontSize:10,cursor:"pointer"}}>✕</button>
+            </div>
+          </div>
+          {inj.note && <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.4}}>{inj.note}</div>}
+        </div>
+      ))}
+
+      {resolved.length>0 && (
+        <div style={{marginTop:8}}>
+          <div style={{fontSize:11,color:"#334155",marginBottom:6}}>Resolved ({resolved.length})</div>
+          {resolved.slice(0,3).map(inj=>(
+            <div key={inj.id} style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid #1e293b",opacity:0.5}}>
+              <span style={{fontSize:12,color:"#64748b",textDecoration:"line-through"}}>{inj.part}</span>
+              <span style={{fontSize:11,color:"#334155"}}>Resolved {inj.resolvedDate}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── OW CONDITIONS LOG ────────────────────────────────────────────────────────
+
+function OWConditionsLog() {
+  const [entries, setEntries] = useState(()=>LS.get("im_ow_log")||[]);
+  const [showForm, setShowForm] = useState(false);
+  const [cond,  setCond]  = useState("");
+  const [temp,  setTemp]  = useState("");
+  const [dist,  setDist]  = useState("");
+  const [time,  setTime]  = useState("");
+  const [strokes,setStrokes]=useState("");
+  const [note,  setNote]  = useState("");
+
+  const CONDITIONS = [
+    {id:"flat",    label:"Flat — mirror calm",   icon:"🌊"},
+    {id:"small",   label:"Small chop",            icon:"〰️"},
+    {id:"choppy",  label:"Choppy — manageable",   icon:"🌊"},
+    {id:"rough",   label:"Rough — challenging",   icon:"⛵"},
+    {id:"pool",    label:"Pool session",           icon:"🏊"},
+  ];
+
+  const save = () => {
+    if(!cond) return;
+    const entry = { id:Date.now(), cond, temp, dist, time, strokes, note, date:new Date().toLocaleDateString("en",{day:"numeric",month:"short",year:"numeric"}) };
+    const updated = [entry, ...entries].slice(0,30);
+    setEntries(updated);
+    LS.set("im_ow_log", updated);
+    setCond(""); setTemp(""); setDist(""); setTime(""); setStrokes(""); setNote("");
+    setShowForm(false);
+  };
+
+  return (
+    <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid #1e293b",borderRadius:14,padding:16,marginBottom:14}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+        <div>
+          <div style={{fontWeight:700,fontSize:15}}>🌊 Swim Log</div>
+          <div style={{fontSize:11,color:"#64748b",marginTop:1}}>OW conditions + stroke count tracker</div>
+        </div>
+        <button onClick={()=>setShowForm(!showForm)}
+          style={{background:"#0891b2",border:"none",borderRadius:8,padding:"7px 14px",color:"#fff",fontWeight:700,fontSize:12,cursor:"pointer"}}>
+          {showForm?"Cancel":"+ Log swim"}
+        </button>
+      </div>
+
+      {showForm && (
+        <div style={{background:"rgba(0,0,0,0.3)",borderRadius:12,padding:14,marginBottom:12}}>
+          <div style={{fontSize:12,color:"#64748b",marginBottom:8}}>Conditions</div>
+          <div style={{display:"flex",flexDirection:"column",gap:4,marginBottom:12}}>
+            {CONDITIONS.map(c=>(
+              <button key={c.id} onClick={()=>setCond(c.id)}
+                style={{background:cond===c.id?"rgba(8,145,178,0.2)":"rgba(255,255,255,0.04)",border:`1px solid ${cond===c.id?"#0891b2":"#1e293b"}`,borderRadius:8,padding:"8px 12px",color:cond===c.id?"#67e8f9":"#94a3b8",fontSize:13,cursor:"pointer",textAlign:"left"}}>
+                {c.icon} {c.label}
+              </button>
+            ))}
+          </div>
+
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
+            {[
+              {label:"Water temp (°C)",val:temp,set:setTemp,ph:"22"},
+              {label:"Distance (m)",   val:dist,set:setDist,ph:"1500"},
+              {label:"Time (min)",     val:time,set:setTime,ph:"35"},
+              {label:"Strokes/length", val:strokes,set:setStrokes,ph:"20"},
+            ].map((f,i)=>(
+              <div key={i}>
+                <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{f.label}</div>
+                <input type="number" inputMode="decimal" placeholder={f.ph} value={f.val} onChange={e=>f.set(e.target.value)}
+                  style={{width:"100%",boxSizing:"border-box",background:"rgba(255,255,255,0.06)",border:"1px solid #334155",borderRadius:8,padding:"8px",color:"#e2e8f0",fontSize:15,fontWeight:700,textAlign:"center"}}
+                />
+              </div>
+            ))}
+          </div>
+
+          <textarea value={note} onChange={e=>setNote(e.target.value)} placeholder="How did it feel? Sighting good? Any currents?"
+            style={{width:"100%",background:"rgba(255,255,255,0.06)",border:"1px solid #334155",borderRadius:8,padding:"9px 12px",color:"#e2e8f0",fontSize:13,resize:"none",height:56,fontFamily:"inherit",boxSizing:"border-box",marginBottom:10}}
+          />
+          <button onClick={save} disabled={!cond}
+            style={{width:"100%",background:!cond?"#1e293b":"#0891b2",border:"none",borderRadius:9,padding:"12px",color:!cond?"#475569":"#fff",fontWeight:700,fontSize:14,cursor:!cond?"default":"pointer"}}>
+            Save Swim
+          </button>
+        </div>
+      )}
+
+      {entries.length===0 && !showForm && (
+        <div style={{textAlign:"center",padding:"16px 0",color:"#334155",fontSize:13}}>No swims logged yet. Start logging OW sessions here.</div>
+      )}
+
+      <div style={{display:"flex",flexDirection:"column",gap:8}}>
+        {entries.slice(0,5).map(e=>{
+          const c = CONDITIONS.find(x=>x.id===e.cond);
+          return (
+            <div key={e.id} style={{background:"rgba(8,145,178,0.08)",border:"1px solid #164e63",borderRadius:10,padding:"10px 12px"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4}}>
+                <div style={{fontWeight:600,fontSize:13,color:"#67e8f9"}}>{c?.icon} {c?.label}</div>
+                <div style={{fontSize:11,color:"#475569"}}>{e.date}</div>
+              </div>
+              <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+                {e.dist  && <span style={{fontSize:11,color:"#94a3b8"}}>📏 {e.dist}m</span>}
+                {e.time  && <span style={{fontSize:11,color:"#94a3b8"}}>⏱ {e.time}min</span>}
+                {e.temp  && <span style={{fontSize:11,color:"#94a3b8"}}>🌡 {e.temp}°C</span>}
+                {e.strokes && <span style={{fontSize:11,color:"#94a3b8"}}>🤚 {e.strokes} str/len</span>}
+              </div>
+              {e.note && <div style={{fontSize:11,color:"#475569",marginTop:4,lineHeight:1.4}}>{e.note}</div>}
+            </div>
+          );
+        })}
+        {entries.length>5 && <div style={{fontSize:11,color:"#334155",textAlign:"center"}}>+{entries.length-5} more entries</div>}
+      </div>
+    </div>
+  );
+}
+
+// ─── RACE SIMULATION TRACKER ──────────────────────────────────────────────────
+
+function RaceSimTracker() {
+  const [sims,    setSims]    = useState(()=>LS.get("im_race_sims")||[]);
+  const [showForm,setShowForm]= useState(false);
+  const [bikeDist,setBikeDist]= useState("");
+  const [bikeTime,setBikeTime]= useState("");
+  const [runDist, setRunDist] = useState("");
+  const [runTime, setRunTime] = useState("");
+  const [transQ,  setTransQ]  = useState(0);
+  const [note,    setNote]    = useState("");
+
+  const TRANS_Q = ["","Smooth — no issues","Minor fumbles","Clunky — need practice","Confused — major work needed"];
+  const TRANS_COLORS = ["","#22c55e","#f59e0b","#f97316","#ef4444"];
+
+  const save = () => {
+    if(!bikeDist&&!runDist) return;
+    const entry = { id:Date.now(), bikeDist, bikeTime, runDist, runTime, transQ, note,
+      date:new Date().toLocaleDateString("en",{day:"numeric",month:"short"}),
+      week:getCurrentTrainingWeek() };
+    const updated = [entry,...sims].slice(0,20);
+    setSims(updated);
+    LS.set("im_race_sims", updated);
+    setBikeDist(""); setBikeTime(""); setRunDist(""); setRunTime(""); setTransQ(0); setNote("");
+    setShowForm(false);
+  };
+
+  return (
+    <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid #1e293b",borderRadius:14,padding:16,marginBottom:14}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+        <div>
+          <div style={{fontWeight:700,fontSize:15}}>⚡ Brick Sessions</div>
+          <div style={{fontSize:11,color:"#64748b",marginTop:1}}>{sims.length} race simulations logged</div>
+        </div>
+        <button onClick={()=>setShowForm(!showForm)}
+          style={{background:"#7c3aed",border:"none",borderRadius:8,padding:"7px 14px",color:"#fff",fontWeight:700,fontSize:12,cursor:"pointer"}}>
+          {showForm?"Cancel":"+ Log brick"}
+        </button>
+      </div>
+
+      {showForm && (
+        <div style={{background:"rgba(0,0,0,0.3)",borderRadius:12,padding:14,marginBottom:12}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+            {[
+              {label:"Bike distance (km)",val:bikeDist,set:setBikeDist,ph:"90"},
+              {label:"Bike time (min)",   val:bikeTime,set:setBikeTime,ph:"190"},
+              {label:"Run distance (km)", val:runDist, set:setRunDist, ph:"10"},
+              {label:"Run time (min)",    val:runTime, set:setRunTime, ph:"60"},
+            ].map((f,i)=>(
+              <div key={i}>
+                <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{f.label}</div>
+                <input type="number" inputMode="decimal" placeholder={f.ph} value={f.val} onChange={e=>f.set(e.target.value)}
+                  style={{width:"100%",boxSizing:"border-box",background:"rgba(255,255,255,0.06)",border:"1px solid #334155",borderRadius:8,padding:"8px",color:"#e2e8f0",fontSize:15,fontWeight:700,textAlign:"center"}}
+                />
+              </div>
+            ))}
+          </div>
+
+          <div style={{fontSize:12,color:"#64748b",marginBottom:8}}>Transition quality</div>
+          <div style={{display:"flex",flexDirection:"column",gap:4,marginBottom:10}}>
+            {[1,2,3,4].map(v=>(
+              <button key={v} onClick={()=>setTransQ(v)}
+                style={{background:transQ===v?TRANS_COLORS[v]+"25":"rgba(255,255,255,0.04)",border:`1px solid ${transQ===v?TRANS_COLORS[v]:"#1e293b"}`,borderRadius:8,padding:"8px 12px",color:transQ===v?TRANS_COLORS[v]:"#94a3b8",fontSize:13,cursor:"pointer",textAlign:"left",fontWeight:transQ===v?700:400}}>
+                {TRANS_Q[v]}
+              </button>
+            ))}
+          </div>
+
+          <textarea value={note} onChange={e=>setNote(e.target.value)} placeholder="How did legs feel on the run? Pacing? What to improve?"
+            style={{width:"100%",background:"rgba(255,255,255,0.06)",border:"1px solid #334155",borderRadius:8,padding:"9px 12px",color:"#e2e8f0",fontSize:13,resize:"none",height:56,fontFamily:"inherit",boxSizing:"border-box",marginBottom:10}}
+          />
+          <button onClick={save}
+            style={{width:"100%",background:"linear-gradient(135deg,#7c3aed,#4f46e5)",border:"none",borderRadius:9,padding:"12px",color:"#fff",fontWeight:700,fontSize:14,cursor:"pointer"}}>
+            Save Brick Session
+          </button>
+        </div>
+      )}
+
+      {sims.length===0 && !showForm && (
+        <div style={{textAlign:"center",padding:"16px 0",color:"#334155",fontSize:13}}>No brick sessions logged yet. Start in Phase 2.</div>
+      )}
+
+      <div style={{display:"flex",flexDirection:"column",gap:8}}>
+        {sims.slice(0,4).map(s=>(
+          <div key={s.id} style={{background:"rgba(124,58,237,0.08)",border:"1px solid #4c1d95",borderRadius:10,padding:"10px 12px"}}>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+              <div style={{fontSize:12,color:"#c084fc",fontWeight:600}}>Week {s.week} · {s.date}</div>
+              {s.transQ>0 && <div style={{fontSize:11,color:TRANS_COLORS[s.transQ]}}>{TRANS_Q[s.transQ]}</div>}
+            </div>
+            <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
+              {s.bikeDist && <div style={{fontSize:13}}><span style={{color:"#86efac"}}>🚴</span> <strong>{s.bikeDist}km</strong>{s.bikeTime&&<span style={{color:"#64748b",fontSize:11}}> in {s.bikeTime}min</span>}</div>}
+              {s.runDist  && <div style={{fontSize:13}}><span style={{color:"#fb923c"}}>🏃</span> <strong>{s.runDist}km</strong>{s.runTime&&<span style={{color:"#64748b",fontSize:11}}> in {s.runTime}min</span>}</div>}
+            </div>
+            {s.note && <div style={{fontSize:11,color:"#64748b",marginTop:4,lineHeight:1.4}}>{s.note}</div>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── WEATHER LOG ──────────────────────────────────────────────────────────────
+
+function WeatherLog({ sessionKeyStr }) {
+  const wkey = `im_weather_${sessionKeyStr}`;
+  const [temp,  setTemp]  = useState(()=>LS.get(wkey)?.temp||"");
+  const [cond,  setCond]  = useState(()=>LS.get(wkey)?.cond||"");
+  const [saved, setSaved] = useState(!!LS.get(wkey));
+
+  const CONDITIONS_W = ["☀️ Sunny","⛅ Cloudy","🌧 Rain","💨 Windy","🥵 Hot","❄️ Cold"];
+
+  const save = (t, c) => {
+    LS.set(wkey, {temp:t, cond:c});
+    setSaved(true);
+  };
+
+  return (
+    <div style={{background:"rgba(0,0,0,0.2)",borderRadius:10,padding:12,marginBottom:12}}>
+      <div style={{fontSize:11,color:"#64748b",letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Session weather</div>
+      <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
+        <input type="number" inputMode="decimal" placeholder="°C" value={temp}
+          onChange={e=>{ setTemp(e.target.value); save(e.target.value,cond); }}
+          style={{width:64,background:"rgba(255,255,255,0.08)",border:"1px solid #334155",borderRadius:7,padding:"6px 8px",color:"#e2e8f0",fontSize:16,fontWeight:700,textAlign:"center"}}
+        />
+        <span style={{color:"#64748b",fontSize:12}}>°C</span>
+        <div style={{flex:1,display:"flex",gap:4,flexWrap:"wrap"}}>
+          {CONDITIONS_W.map(c=>(
+            <button key={c} onClick={()=>{ setCond(c); save(temp,c); }}
+              style={{background:cond===c?"rgba(124,58,237,0.3)":"rgba(255,255,255,0.04)",border:`1px solid ${cond===c?"#7c3aed":"#1e293b"}`,borderRadius:6,padding:"4px 8px",color:cond===c?"#c084fc":"#64748b",fontSize:11,cursor:"pointer"}}>
+              {c}
+            </button>
+          ))}
+        </div>
+      </div>
+      {saved && temp && <div style={{fontSize:10,color:"#334155"}}>{temp}°C · {cond}</div>}
+    </div>
+  );
+}
+
+// ─── MILESTONE COUNTDOWN ──────────────────────────────────────────────────────
+
+function MilestoneCountdown({ currentWeek }) {
+  const realWeek = getCurrentTrainingWeek();
+  const next = MILESTONES.find(m => m.week > realWeek);
+  const race = MILESTONES[MILESTONES.length-1];
+  if(!next) return null;
+
+  const weeksToNext = next.week - realWeek;
+  const weeksToRace = race.week - realWeek;
+
+  return (
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
+      <div style={{background:"rgba(16,185,129,0.1)",border:"1px solid #065f46",borderRadius:12,padding:"12px 14px",textAlign:"center"}}>
+        <div style={{fontSize:10,color:"#10b981",letterSpacing:1,textTransform:"uppercase",marginBottom:4}}>Next milestone</div>
+        <div style={{fontSize:22,fontWeight:800,color:"#86efac"}}>{weeksToNext}<span style={{fontSize:12,color:"#475569",fontWeight:400}}> wks</span></div>
+        <div style={{fontSize:11,color:"#64748b",marginTop:4,lineHeight:1.4}}>{next.label}</div>
+      </div>
+      <div style={{background:"rgba(124,58,237,0.1)",border:"1px solid #4c1d95",borderRadius:12,padding:"12px 14px",textAlign:"center"}}>
+        <div style={{fontSize:10,color:"#8b5cf6",letterSpacing:1,textTransform:"uppercase",marginBottom:4}}>To race day</div>
+        <div style={{fontSize:22,fontWeight:800,color:"#c084fc"}}>{weeksToRace}<span style={{fontSize:12,color:"#475569",fontWeight:400}}> wks</span></div>
+        <div style={{fontSize:11,color:"#64748b",marginTop:4}}>14 Sep 2027</div>
+      </div>
+    </div>
+  );
+}
+
+// ─── TOOLS VIEW (new tab combining all the tools) ────────────────────────────
+
+function ToolsView({ currentWeek }) {
+  const [subTab, setSubTab] = useState("zone2");
+
+  return (
+    <div style={{paddingBottom:90}}>
+      <div style={{background:"linear-gradient(135deg,#0f172a,#1a1a2e)",padding:"20px 16px 14px",borderBottom:"1px solid #1e293b"}}>
+        <div style={{fontSize:11,color:"#8b5cf6",letterSpacing:2,textTransform:"uppercase",marginBottom:4}}>Tools</div>
+        <div style={{fontSize:24,fontWeight:800}}>Training Tools</div>
+        <div style={{fontSize:13,color:"#64748b"}}>Calculators, trackers & logs</div>
+      </div>
+
+      {/* Sub-tab nav */}
+      <div style={{display:"flex",overflowX:"auto",borderBottom:"1px solid #1e293b",background:"#0d1117"}}>
+        {[
+          ["zone2",  "❤️ Zone 2"],
+          ["injury", "🩹 Injury"],
+          ["swim",   "🌊 Swim"],
+          ["brick",  "⚡ Brick"],
+        ].map(([id,label])=>(
+          <button key={id} onClick={()=>setSubTab(id)}
+            style={{flexShrink:0,background:"none",border:"none",borderBottom:subTab===id?"2px solid #7c3aed":"2px solid transparent",color:subTab===id?"#e2e8f0":"#64748b",padding:"12px 16px",fontSize:12,cursor:"pointer",fontWeight:subTab===id?700:400,whiteSpace:"nowrap"}}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <div style={{padding:"14px 16px"}}>
+        {subTab==="zone2"  && <Zone2Calculator/>}
+        {subTab==="injury" && <InjuryTracker/>}
+        {subTab==="swim"   && <OWConditionsLog/>}
+        {subTab==="brick"  && <RaceSimTracker/>}
+      </div>
+    </div>
+  );
+}
+
 // ─── UPDATED BOTTOM NAV ───────────────────────────────────────────────────────
 
 function BottomNav({ tab, setTab }) {
@@ -2187,7 +2827,7 @@ function BottomNav({ tab, setTab }) {
     {id:"week",     icon:"🗓",  label:"Week"},
     {id:"progress", icon:"📈", label:"Progress"},
     {id:"stretch",  icon:"🧘", label:"Stretch"},
-    {id:"race",     icon:"🏁", label:"Race"},
+    {id:"tools",    icon:"🔧", label:"Tools"},
   ];
   return (
     <nav style={{position:"fixed",bottom:0,left:0,right:0,background:"#0d1117",borderTop:"1px solid #1e293b",display:"flex",zIndex:100,paddingBottom:"env(safe-area-inset-bottom)"}}>
@@ -2262,6 +2902,7 @@ export default function App() {
       {tab==="week"     && <WeekView     currentWeek={currentWeek} setCurrentWeek={setCurrentWeek}/>}
       {tab==="progress" && <ProgressView currentWeek={currentWeek} StreakBadge={StreakBadge} StrengthGraphs={StrengthGraphs} RecoveryTracker={RecoveryTracker} RaceCountdown={RaceCountdown}/>}
       {tab==="stretch"  && <StretchingView/>}
+      {tab==="tools"    && <ToolsView currentWeek={currentWeek}/>}
       {tab==="race"     && <RaceView currentWeek={currentWeek}/>}
       {tab==="notif"    && <NotificationsView/>}
       <BottomNav tab={tab} setTab={handleTabChange}/>
