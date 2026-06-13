@@ -247,6 +247,15 @@ function getSchedKey(w) {
   return "57-63";
 }
 
+// Week calculation from training start date
+const TRAINING_START = new Date("2026-06-08");
+function getCurrentTrainingWeek() {
+  const now = new Date();
+  const diff = now - TRAINING_START;
+  const week = Math.floor(diff / (1000*60*60*24*7)) + 1;
+  return Math.min(63, Math.max(1, week));
+}
+
 // ─── TRAVEL DATA ─────────────────────────────────────────────────────────────
 
 const DRIVER_STRETCHES = [
@@ -307,6 +316,91 @@ const NO_EQUIPMENT_WORKOUTS = {
   }
 };
 
+// ─── STRETCHING LIBRARY ──────────────────────────────────────────────────────
+
+const STRETCH_ROUTINES = {
+  postRun: {
+    label:"Post-Run Recovery",
+    icon:"🏃",
+    color:"#ea580c",
+    duration:"15–20 min",
+    note:"Do this within 10 minutes of finishing any run. Muscles are warm — this is when stretching actually works.",
+    stretches:[
+      {name:"Standing quad stretch",     duration:"60s each",  icon:"🦵", desc:"Stand on one leg, pull heel to glute. Keep knees together and stand tall. Hold 60s each side × 2. Non-negotiable after runs."},
+      {name:"Hip flexor lunge stretch",  duration:"60s each",  icon:"🧘", desc:"Low lunge, back knee on ground, push hips forward. Lean back slightly for deeper stretch. 60s each side. Runners chronically tight here."},
+      {name:"Pigeon pose",               duration:"90s each",  icon:"🕊️", desc:"Front shin parallel to top of mat, sink hips down. The gold standard for glute and piriformis. 90s each side — don't rush it."},
+      {name:"Seated hamstring stretch",  duration:"60s each",  icon:"⬇️", desc:"Sit on floor, one leg extended. Hinge forward at hip (not spine), reach toward foot. Feel stretch in back of thigh, not lower back."},
+      {name:"Calf stretch — straight",   duration:"45s each",  icon:"👟", desc:"Hands on wall, back leg straight, heel flat on floor. Lean into wall. 45s each side. Prevents Achilles issues under high mileage."},
+      {name:"Calf stretch — bent knee",  duration:"45s each",  icon:"👟", desc:"Same position, slight bend in back knee. Targets soleus (deeper calf). Often the tighter of the two. 45s each side."},
+      {name:"Figure-4 glute stretch",    duration:"60s each",  icon:"🔄", desc:"Lying on back, cross ankle over opposite knee, pull both toward chest. Gentle hip rotation. 60s each side."},
+    ]
+  },
+  postBike: {
+    label:"Post-Bike Recovery",
+    icon:"🚴",
+    color:"#16a34a",
+    duration:"15 min",
+    note:"After long rides your hip flexors and lower back lock up fast. Do this before they stiffen.",
+    stretches:[
+      {name:"Hip flexor stretch",        duration:"90s each",  icon:"🦵", desc:"Low lunge, really sink the hips down. After 3+ hours on the bike this will feel tight. 90s each side, no rushing."},
+      {name:"Pigeon pose",               duration:"90s each",  icon:"🕊️", desc:"Essential after cycling. Glutes work hard on long rides. 90s each side."},
+      {name:"Cat-cow",                   duration:"2 min",     icon:"🐱", desc:"On hands and knees: arch back up (cat), drop belly down (cow). 10 slow reps. Decompresses the lumbar spine after riding position."},
+      {name:"Thread the needle",         duration:"45s each",  icon:"🧵", desc:"On hands and knees, slide one arm under body along floor. Thoracic rotation — counteracts the hunched bike position."},
+      {name:"Doorframe chest opener",    duration:"60s each",  icon:"🚪", desc:"Arm at 90° on doorframe, rotate body away. Opens chest and anterior shoulder, compressed during cycling. 60s each side."},
+      {name:"Standing forward fold",     duration:"60s",       icon:"⬇️", desc:"Feet hip-width, fold forward, arms heavy. Slight bend in knees. Decompresses spine and hamstrings."},
+      {name:"Neck side stretch",         duration:"30s each",  icon:"😌", desc:"Tilt ear to shoulder gently, breathe. Cycling neck position creates tension here. 30s each side × 2."},
+    ]
+  },
+  postSwim: {
+    label:"Post-Swim Stretch",
+    icon:"🏊",
+    color:"#0891b2",
+    duration:"10 min",
+    note:"Shorter routine — swimming is lower impact. Focus on shoulders and lats which work hard in freestyle.",
+    stretches:[
+      {name:"Cross-body shoulder stretch",duration:"30s each", icon:"💪", desc:"Pull one arm across chest, hold at elbow. 30s each side × 2. Shoulder capsule stretch."},
+      {name:"Doorframe chest stretch",   duration:"45s each",  icon:"🚪", desc:"Opens the anterior shoulder and pec — compressed during catch phase of freestyle."},
+      {name:"Lat stretch on wall",       duration:"30s each",  icon:"🧗", desc:"Place hand on wall at shoulder height, step forward and rotate away. Lats work extremely hard in swimming."},
+      {name:"Child's pose",              duration:"60s",       icon:"🧘", desc:"Kneel, sit back on heels, arms extended forward on floor. Full spine and lat decompression."},
+      {name:"Neck rotation",             duration:"30s each",  icon:"🔄", desc:"Slow head rotation side to side. Bilateral breathing in freestyle creates neck imbalance over time."},
+    ]
+  },
+  fullBody: {
+    label:"Full Body Mobility",
+    icon:"🌟",
+    color:"#7c3aed",
+    duration:"25–30 min",
+    note:"Do this on rest days. The single best thing you can do for long-term injury prevention across 15 months of triathlon training.",
+    stretches:[
+      {name:"World's greatest stretch",  duration:"5 each side",icon:"🌍", desc:"Step into lunge, place same-side hand on floor, rotate opposite arm to sky. Hold 3s at top. Best single mobility exercise for triathletes."},
+      {name:"90/90 hip stretch",         duration:"90s each",  icon:"🧘", desc:"Both knees at 90°, front shin parallel to front, rear shin to side. Sit tall. Works both internal and external hip rotation. Game changer for runners."},
+      {name:"Pigeon pose",               duration:"2 min each",icon:"🕊️", desc:"Front shin parallel, sink hips down fully. 2 minutes each side for the full body routine — hold longer than you think."},
+      {name:"Hip flexor lunge",          duration:"90s each",  icon:"🦵", desc:"Low lunge with back knee down. Add a gentle back bend for deeper stretch. Critical for desk workers and drivers."},
+      {name:"Seated forward fold",       duration:"90s",       icon:"⬇️", desc:"Both legs extended, hinge at hips. Use a strap or towel around feet if needed. Pure hamstring."},
+      {name:"Thread the needle",         duration:"45s each",  icon:"🧵", desc:"Thoracic rotation on hands and knees. Do 5 reps slowly each side before holding."},
+      {name:"Doorframe chest opener",    duration:"60s each",  icon:"🚪", desc:"Opens chest and anterior shoulder. Iron man training closes you up — this fights that."},
+      {name:"Lat stretch",               duration:"45s each",  icon:"🧗", desc:"One hand on wall, step forward and rotate. Lats restrict shoulder mobility when tight."},
+      {name:"Calf and Achilles stretch", duration:"45s each",  icon:"👟", desc:"Both variants: straight leg and bent knee. High running volume is brutal on calves."},
+      {name:"Supine twist",              duration:"60s each",  icon:"🌀", desc:"Lying on back, bring one knee across body to floor while keeping shoulder down. Decompresses lumbar spine."},
+    ]
+  },
+  morning: {
+    label:"Morning Wake-Up",
+    icon:"🌅",
+    color:"#f59e0b",
+    duration:"8–10 min",
+    note:"Before you get out of bed or right after. Gets blood moving before early morning sessions. Do this before every morning swim or run.",
+    stretches:[
+      {name:"Knee to chest",             duration:"30s each",  icon:"🧘", desc:"Lying on back, pull one knee gently to chest. Releases overnight lumbar compression. 30s each side."},
+      {name:"Supine twist",              duration:"30s each",  icon:"🌀", desc:"Knee across body, both shoulders on floor. Wakes up the spine before loading it."},
+      {name:"Cat-cow × 10",              duration:"1 min",     icon:"🐱", desc:"Slow and deliberate. Lubricates the facet joints. Do this every single morning."},
+      {name:"Hip circles standing",      duration:"30s each",  icon:"🔄", desc:"Hands on hips, slow large circles. 10 each direction. Warms up the hip joint capsule."},
+      {name:"Arm circles",               duration:"30s each",  icon:"💫", desc:"Forward and backward. Warms shoulder joint before swimming. 15 each direction."},
+      {name:"Ankle circles",             duration:"20s each",  icon:"👟", desc:"Seated or standing, rotate ankle slowly. Important before running, especially early morning."},
+    ]
+  }
+};
+
 // ─── TODAY ────────────────────────────────────────────────────────────────────
 
 function TodayView({ currentWeek, setCurrentWeek, onPR }) {
@@ -323,6 +417,7 @@ function TodayView({ currentWeek, setCurrentWeek, onPR }) {
   const [done, setDone]           = useState(false);
   const [notes, setNotes]         = useState("");
   const [saved, setSaved]         = useState(false);
+  const [showRetro, setShowRetro] = useState(false);
 
   // Travel mode state
   const [mode, setMode]                   = useState("normal"); // "normal"|"travel"
@@ -435,7 +530,20 @@ function TodayView({ currentWeek, setCurrentWeek, onPR }) {
         </div>
       </div>
 
+      {/* Retroactive log modal */}
+      {showRetro && <RetroactiveLog currentWeek={currentWeek} onClose={()=>setShowRetro(false)}/>}
+
       <div style={{padding:"14px 16px"}}>
+        {/* Missed workout button */}
+        <button onClick={()=>setShowRetro(true)}
+          style={{width:"100%",background:"rgba(245,158,11,0.08)",border:"1px solid #92400e",borderRadius:10,padding:"9px 14px",marginBottom:12,display:"flex",alignItems:"center",gap:10,cursor:"pointer",textAlign:"left"}}>
+          <span style={{fontSize:18}}>📝</span>
+          <div style={{flex:1}}>
+            <div style={{fontSize:13,fontWeight:600,color:"#fcd34d"}}>Log a missed workout</div>
+            <div style={{fontSize:11,color:"#92400e",marginTop:1}}>Retroactively record any past session</div>
+          </div>
+          <span style={{color:"#92400e",fontSize:12}}>→</span>
+        </button>
 
         {/* ── TRAVEL MODE BANNER / TOGGLE ── */}
         {mode === "normal" && ts && ts.type !== "rest" && (
@@ -1501,8 +1609,81 @@ const RACE_CHECKLIST = [
   ]},
 ];
 
-function PreRaceChecklist({ currentWeek }) {
+// ─── RACE PACING DATA ─────────────────────────────────────────────────────────
+
+const PACING_SPLITS = [
+  { leg:"🏊 Swim", target:"1:30:00", detail:"2:22/100m", color:"#0891b2",
+    tips:[
+      "Seed yourself in the middle-back of your wave — not the front",
+      "First 400m will feel slow — that's correct, let faster swimmers go",
+      "Sight every 8–10 strokes, aim for buoys not the shore",
+      "Draft off feet of someone slightly faster if you can find them",
+      "Exit the water calm — your HR will be elevated, walk T1 entrance",
+    ]},
+  { leg:"⚡ T1", target:"8:00", detail:"Swim → Bike", color:"#6366f1",
+    tips:[
+      "Wetsuit off as you jog — practise this in training",
+      "Helmet on and clipped BEFORE touching the bike (DQ rule)",
+      "Don't rush — 30 extra seconds here saves nothing",
+      "Sunglasses, gloves, shoes — know your sequence cold",
+    ]},
+  { leg:"🚴 Bike", target:"6:30:00", detail:"27.7 km/h avg", color:"#16a34a",
+    tips:[
+      "First 60km: feel easy, almost boring. HR zone 2 only.",
+      "Eat at km 20, 40, 60, 80, 100, 120, 140, 160 — every 20km",
+      "Target 60–80g carbs/hour: gels + bars + sports drink",
+      "Don't chase faster cyclists early — you'll pay on the run",
+      "Km 90–120 is when legs feel heavy — stay patient, it passes",
+      "Save 15% for last 30km — controlled push to T2",
+      "Drink 500–750ml per hour, more if hot",
+    ]},
+  { leg:"⚡ T2", target:"6:00", detail:"Bike → Run", color:"#6366f1",
+    tips:[
+      "Rack bike, helmet off, race belt on, running shoes on",
+      "Grab run nutrition — gels in pocket, nothing else needed",
+      "Start the run SLOW — first km will feel terrible, that's normal",
+    ]},
+  { leg:"🏃 Run", target:"4:30:00", detail:"6:24/km", color:"#ea580c",
+    tips:[
+      "First 5km: slower than target pace. Let legs wake up.",
+      "Walk every aid station — take 45–60s, drink, walk out, run again",
+      "Cola + water at aid stations from km 25 onward — works remarkably well",
+      "Run 8 min / walk 1 min if needed — still hits 6:24/km avg",
+      "At km 30 you will want to stop. Don't. It gets better at km 35.",
+      "Final 2km: empty the tank. This is what 15 months was for.",
+    ]},
+];
+
+const NUTRITION_PLAN = [
+  { phase:"Race morning (3hrs before)", items:[
+    "Large bowl of oats or rice with banana — 150–200g carbs",
+    "500ml water with electrolytes",
+    "Coffee if that's your normal — race day is not the day to skip it",
+    "Nothing new, nothing experimental",
+  ]},
+  { phase:"Pre-swim (30 min before)", items:[
+    "1 gel with 200ml water",
+    "Sip electrolyte drink — don't overdrink",
+  ]},
+  { phase:"On the bike (every 20–30 min)", items:[
+    "Alternate between gel (25g carbs) and banana/bar (30–40g carbs)",
+    "Sports drink instead of plain water where available",
+    "Target: 70g carbs/hour = roughly 1 gel + 1 banana per hour",
+    "Salt tablets if sweating heavily (every 45–60 min in heat)",
+  ]},
+  { phase:"On the run (every aid station)", items:[
+    "Small cup cola + small cup water — sip don't gulp",
+    "1 gel every 40–45 min for first 25km",
+    "From km 25: cola is your best friend — sugar + caffeine",
+    "If stomach turns — switch to water only, walk, reset",
+  ]},
+];
+
+function RaceView({ currentWeek }) {
+  const [subTab, setSubTab] = useState("pacing");
   const [checks, setChecks] = useState(()=>LS.get("im_race_checklist")||{});
+  const [expandedLeg, setExpandedLeg] = useState(null);
+  const [expandedNutr, setExpandedNutr] = useState(null);
   const isRaceWeek = currentWeek >= 62;
 
   const toggle = (dayI, itemI) => {
@@ -1515,61 +1696,484 @@ function PreRaceChecklist({ currentWeek }) {
   const totalItems = RACE_CHECKLIST.reduce((a,d)=>a+d.items.length,0);
   const doneItems  = Object.values(checks).filter(Boolean).length;
 
+  // Target finish time breakdown
+  const totalMins = 90 + 8 + 390 + 6 + 270; // 764 min = 12:44
+  const hrs = Math.floor(totalMins/60);
+  const mins = totalMins % 60;
+
   return (
     <div style={{paddingBottom:90}}>
+      {/* Header */}
       <div style={{background:"linear-gradient(135deg,#1a0533,#2e1065)",padding:"20px 16px 14px",borderBottom:"1px solid #4c1d95"}}>
-        <div style={{fontSize:11,color:"#8b5cf6",letterSpacing:2,textTransform:"uppercase",marginBottom:4}}>Race Preparation</div>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+        <div style={{fontSize:11,color:"#8b5cf6",letterSpacing:2,textTransform:"uppercase",marginBottom:4}}>Race Day</div>
+        <div style={{fontSize:24,fontWeight:800}}>Ironman Emilia-Romagna</div>
+        <div style={{fontSize:13,color:"#7c3aed",marginTop:2}}>14 September 2027 · Cervia, Italy · Target: Sub-13</div>
+
+        {/* Target time display */}
+        <div style={{marginTop:12,background:"rgba(124,58,237,0.2)",border:"1px solid #6d28d9",borderRadius:10,padding:"10px 14px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div>
-            <div style={{fontSize:24,fontWeight:800}}>Pre-Race Checklist</div>
-            <div style={{fontSize:13,color:"#7c3aed",marginTop:2}}>Ironman Emilia-Romagna · 14 Sep 2027</div>
+            <div style={{fontSize:11,color:"#8b5cf6",letterSpacing:1,textTransform:"uppercase"}}>Target finish</div>
+            <div style={{fontSize:28,fontWeight:800,color:"#c084fc",letterSpacing:-1}}>{hrs}h {mins}m</div>
           </div>
-        </div>
-        {!isRaceWeek && (
-          <div style={{marginTop:10,background:"rgba(124,58,237,0.15)",border:"1px solid #4c1d95",borderRadius:8,padding:"8px 12px",fontSize:12,color:"#a78bfa"}}>
-            This checklist activates in week 62. You're in week {currentWeek} — keep training!
-          </div>
-        )}
-        <div style={{marginTop:12}}>
-          <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#6d28d9",marginBottom:4}}>
-            <span>{doneItems} / {totalItems} items checked</span>
-            <span>{Math.round((doneItems/totalItems)*100)}%</span>
-          </div>
-          <div style={{background:"#1e293b",borderRadius:4,height:5,overflow:"hidden"}}>
-            <div style={{background:"linear-gradient(90deg,#7c3aed,#c084fc)",height:"100%",borderRadius:4,width:`${(doneItems/totalItems)*100}%`,transition:"width 0.3s"}}/>
+          <div style={{textAlign:"right"}}>
+            <div style={{fontSize:11,color:"#6d28d9",marginBottom:4}}>Goal time</div>
+            <div style={{fontSize:14,fontWeight:700,color:"#a78bfa"}}>Sub-13:00</div>
+            <div style={{fontSize:11,color:"#6d28d9",marginTop:2}}>+16 min buffer</div>
           </div>
         </div>
       </div>
 
-      <div style={{padding:"14px 16px",display:"flex",flexDirection:"column",gap:12}}>
-        {RACE_CHECKLIST.map((section,di)=>{
-          const sectionDone = section.items.filter((_,ii)=>checks[`${di}_${ii}`]).length;
-          return (
-            <div key={di} style={{background:"rgba(255,255,255,0.03)",border:"1px solid #1e293b",borderRadius:14,padding:14,opacity:isRaceWeek?1:0.5}}>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-                <div style={{display:"flex",alignItems:"center",gap:8}}>
-                  <span style={{fontSize:22}}>{section.icon}</span>
-                  <div style={{fontWeight:700,fontSize:14,color:"#c084fc"}}>{section.day}</div>
-                </div>
-                <span style={{fontSize:12,color:"#475569"}}>{sectionDone}/{section.items.length}</span>
-              </div>
-              <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                {section.items.map((item,ii)=>{
-                  const isDone = checks[`${di}_${ii}`];
-                  return (
-                    <div key={ii} onClick={()=>isRaceWeek&&toggle(di,ii)}
-                      style={{display:"flex",alignItems:"flex-start",gap:10,background:isDone?"rgba(16,185,129,0.08)":"transparent",borderRadius:8,padding:"8px 10px",cursor:isRaceWeek?"pointer":"default",transition:"background 0.15s"}}>
-                      <div style={{width:20,height:20,borderRadius:5,background:isDone?"#059669":"transparent",border:`2px solid ${isDone?"#10b981":"#334155"}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1,fontSize:11,color:"#fff",fontWeight:700}}>
-                        {isDone?"✓":""}
-                      </div>
-                      <div style={{fontSize:13,color:isDone?"#86efac":"#cbd5e1",lineHeight:1.5,textDecoration:isDone?"line-through":""}}>{item}</div>
+      {/* Sub-tab nav */}
+      <div style={{display:"flex",borderBottom:"1px solid #1e293b",background:"#0d1117"}}>
+        {[["pacing","⚡ Pacing"],["nutrition","🍌 Nutrition"],["checklist","✅ Checklist"]].map(([id,label])=>(
+          <button key={id} onClick={()=>setSubTab(id)}
+            style={{flex:1,background:"none",border:"none",borderBottom:subTab===id?"2px solid #7c3aed":"2px solid transparent",color:subTab===id?"#e2e8f0":"#64748b",padding:"12px 8px",fontSize:12,cursor:"pointer",fontWeight:subTab===id?700:400}}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* PACING TAB */}
+      {subTab==="pacing" && (
+        <div style={{padding:"14px 16px",display:"flex",flexDirection:"column",gap:10}}>
+          <div style={{background:"rgba(37,99,235,0.08)",border:"1px solid #1e3a5f",borderRadius:10,padding:"10px 14px",fontSize:12,color:"#93c5fd",lineHeight:1.6,marginBottom:4}}>
+            💡 <strong>The golden rule:</strong> The bike makes or breaks your race. Go out easy, build through, empty the tank on the run. Every minute saved on the bike by going too hard costs 3 minutes on the run.
+          </div>
+
+          {PACING_SPLITS.map((s,i)=>{
+            const isOpen = expandedLeg===i;
+            return (
+              <div key={i} onClick={()=>setExpandedLeg(isOpen?null:i)}
+                style={{background:isOpen?`${s.color}18`:"rgba(255,255,255,0.03)",border:`1px solid ${isOpen?s.color:"#1e293b"}`,borderRadius:12,padding:"12px 14px",cursor:"pointer",transition:"all 0.2s"}}>
+                <div style={{display:"flex",alignItems:"center",gap:12}}>
+                  <div style={{flex:1}}>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:3}}>
+                      <span style={{fontWeight:700,fontSize:15}}>{s.leg}</span>
+                      <span style={{fontWeight:800,fontSize:16,color:s.color}}>{s.target}</span>
                     </div>
-                  );
-                })}
+                    <div style={{fontSize:11,color:"#64748b"}}>{s.detail}</div>
+                  </div>
+                  <span style={{color:"#334155",fontSize:12,flexShrink:0}}>{isOpen?"▲":"▼"}</span>
+                </div>
+
+                {isOpen && (
+                  <div style={{marginTop:12,paddingTop:12,borderTop:`1px solid ${s.color}30`}}>
+                    <div style={{fontSize:11,color:s.color,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Race tips</div>
+                    <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                      {s.tips.map((tip,j)=>(
+                        <div key={j} style={{display:"flex",gap:8,fontSize:13,color:"#94a3b8",lineHeight:1.5}}>
+                          <span style={{color:s.color,flexShrink:0,marginTop:1}}>→</span>
+                          <span>{tip}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
+            );
+          })}
+
+          {/* Total time bar */}
+          <div style={{background:"rgba(124,58,237,0.1)",border:"1px solid #6d28d9",borderRadius:12,padding:"12px 14px",marginTop:4}}>
+            <div style={{fontSize:11,color:"#8b5cf6",letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Time breakdown</div>
+            <div style={{display:"flex",gap:2,height:20,borderRadius:6,overflow:"hidden",marginBottom:8}}>
+              {[
+                {w:90,  color:"#0891b2", label:"Swim"},
+                {w:8,   color:"#6366f1", label:"T1"},
+                {w:390, color:"#16a34a", label:"Bike"},
+                {w:6,   color:"#6366f1", label:"T2"},
+                {w:270, color:"#ea580c", label:"Run"},
+              ].map((seg,i)=>(
+                <div key={i} style={{width:`${(seg.w/totalMins)*100}%`,background:seg.color,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  {seg.w>20 && <span style={{fontSize:8,color:"rgba(255,255,255,0.8)",fontWeight:700,whiteSpace:"nowrap"}}>{seg.label}</span>}
+                </div>
+              ))}
             </div>
-          );
-        })}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:4}}>
+              {[
+                {label:"Swim",color:"#0891b2",time:"1:30"},
+                {label:"T1",  color:"#6366f1",time:"0:08"},
+                {label:"Bike",color:"#16a34a",time:"6:30"},
+                {label:"T2",  color:"#6366f1",time:"0:06"},
+                {label:"Run", color:"#ea580c",time:"4:30"},
+              ].map((s,i)=>(
+                <div key={i} style={{textAlign:"center"}}>
+                  <div style={{width:8,height:8,borderRadius:"50%",background:s.color,margin:"0 auto 3px"}}/>
+                  <div style={{fontSize:9,color:"#64748b"}}>{s.label}</div>
+                  <div style={{fontSize:11,fontWeight:700,color:"#e2e8f0"}}>{s.time}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Key numbers */}
+          <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid #1e293b",borderRadius:12,padding:"12px 14px"}}>
+            <div style={{fontSize:11,color:"#64748b",letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Key training benchmarks</div>
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {[
+                {icon:"🏊",label:"Swim — ready when:",bench:"1500m in pool under 40min"},
+                {icon:"🚴",label:"Bike — ready when:",bench:"150km training ride under 6hrs"},
+                {icon:"🏃",label:"Run — ready when:",bench:"Half marathon standalone under 2:10"},
+                {icon:"⚡",label:"Brick — ready when:",bench:"3hr ride + 45min run feels manageable"},
+              ].map((b,i)=>(
+                <div key={i} style={{display:"flex",alignItems:"center",gap:10}}>
+                  <span style={{fontSize:18,flexShrink:0}}>{b.icon}</span>
+                  <div>
+                    <div style={{fontSize:11,color:"#64748b"}}>{b.label}</div>
+                    <div style={{fontSize:13,fontWeight:600,color:"#e2e8f0"}}>{b.bench}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* NUTRITION TAB */}
+      {subTab==="nutrition" && (
+        <div style={{padding:"14px 16px",display:"flex",flexDirection:"column",gap:10}}>
+          <div style={{background:"rgba(245,158,11,0.08)",border:"1px solid #92400e",borderRadius:10,padding:"10px 14px",fontSize:12,color:"#fcd34d",lineHeight:1.6,marginBottom:4}}>
+            🍌 <strong>Nothing new on race day.</strong> Every gel, bar, and drink you use on race day must be tested in long training sessions first. Start practising race nutrition from Phase 2 onward.
+          </div>
+          {NUTRITION_PLAN.map((n,i)=>{
+            const isOpen = expandedNutr===i;
+            return (
+              <div key={i} onClick={()=>setExpandedNutr(isOpen?null:i)}
+                style={{background:isOpen?"rgba(245,158,11,0.08)":"rgba(255,255,255,0.03)",border:`1px solid ${isOpen?"#d97706":"#1e293b"}`,borderRadius:12,padding:"12px 14px",cursor:"pointer",transition:"all 0.2s"}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                  <div style={{fontWeight:700,fontSize:14,color:isOpen?"#fcd34d":"#e2e8f0"}}>{n.phase}</div>
+                  <span style={{color:"#334155",fontSize:12}}>{isOpen?"▲":"▼"}</span>
+                </div>
+                {isOpen && (
+                  <div style={{marginTop:10,paddingTop:10,borderTop:"1px solid #d9770630",display:"flex",flexDirection:"column",gap:6}}>
+                    {n.items.map((item,j)=>(
+                      <div key={j} style={{display:"flex",gap:8,fontSize:13,color:"#94a3b8",lineHeight:1.5}}>
+                        <span style={{color:"#f59e0b",flexShrink:0,marginTop:1}}>→</span>
+                        <span>{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          <div style={{background:"rgba(16,185,129,0.08)",border:"1px solid #065f46",borderRadius:12,padding:"12px 14px"}}>
+            <div style={{fontWeight:700,fontSize:13,color:"#86efac",marginBottom:8}}>📊 Total race day carb target</div>
+            {[
+              {label:"Bike (6.5hrs × 70g)",val:"~455g carbs"},
+              {label:"Run (4.5hrs × 50g)", val:"~225g carbs"},
+              {label:"Total",              val:"~680g carbs",bold:true},
+            ].map((r,i)=>(
+              <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:i<2?"1px solid rgba(255,255,255,0.04)":"none"}}>
+                <span style={{fontSize:13,color:"#64748b"}}>{r.label}</span>
+                <span style={{fontSize:13,fontWeight:r.bold?800:600,color:r.bold?"#86efac":"#e2e8f0"}}>{r.val}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* CHECKLIST TAB */}
+      {subTab==="checklist" && (
+        <div style={{padding:"14px 16px",display:"flex",flexDirection:"column",gap:10}}>
+          {!isRaceWeek && (
+            <div style={{background:"rgba(124,58,237,0.15)",border:"1px solid #4c1d95",borderRadius:10,padding:"10px 14px",fontSize:12,color:"#a78bfa"}}>
+              Checklist activates in week 62. You're in week {currentWeek} — keep training!
+            </div>
+          )}
+          <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"#64748b",marginBottom:2}}>
+            <span>{doneItems}/{totalItems} items checked</span>
+            <span>{Math.round((doneItems/totalItems)*100)}%</span>
+          </div>
+          <div style={{background:"#1e293b",borderRadius:4,height:4,overflow:"hidden",marginBottom:8}}>
+            <div style={{background:"linear-gradient(90deg,#7c3aed,#c084fc)",height:"100%",borderRadius:4,width:`${(doneItems/totalItems)*100}%`,transition:"width 0.3s"}}/>
+          </div>
+          {RACE_CHECKLIST.map((section,di)=>{
+            const sectionDone = section.items.filter((_,ii)=>checks[`${di}_${ii}`]).length;
+            return (
+              <div key={di} style={{background:"rgba(255,255,255,0.03)",border:"1px solid #1e293b",borderRadius:12,padding:14,opacity:isRaceWeek?1:0.5}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{fontSize:20}}>{section.icon}</span>
+                    <div style={{fontWeight:700,fontSize:14,color:"#c084fc"}}>{section.day}</div>
+                  </div>
+                  <span style={{fontSize:12,color:"#475569"}}>{sectionDone}/{section.items.length}</span>
+                </div>
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                  {section.items.map((item,ii)=>{
+                    const isDone = checks[`${di}_${ii}`];
+                    return (
+                      <div key={ii} onClick={()=>isRaceWeek&&toggle(di,ii)}
+                        style={{display:"flex",alignItems:"flex-start",gap:10,background:isDone?"rgba(16,185,129,0.08)":"transparent",borderRadius:8,padding:"7px 10px",cursor:isRaceWeek?"pointer":"default",transition:"background 0.15s"}}>
+                        <div style={{width:20,height:20,borderRadius:5,background:isDone?"#059669":"transparent",border:`2px solid ${isDone?"#10b981":"#334155"}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1,fontSize:11,color:"#fff",fontWeight:700}}>
+                          {isDone?"✓":""}
+                        </div>
+                        <div style={{fontSize:13,color:isDone?"#86efac":"#cbd5e1",lineHeight:1.5,textDecoration:isDone?"line-through":""}}>{item}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── STRETCHING VIEW ─────────────────────────────────────────────────────────
+
+function StretchingView() {
+  const [activeRoutine, setActiveRoutine] = useState("fullBody");
+  const [checked, setChecked] = useState({});
+  const [savedRoutine, setSavedRoutine] = useState(null);
+
+  const today = new Date().toISOString().split("T")[0];
+  const skey = `im_stretch_${today}`;
+
+  useEffect(()=>{
+    const d = LS.get(skey);
+    if(d){ setChecked(d.checked||{}); setSavedRoutine(d.routine||null); if(d.routine) setActiveRoutine(d.routine); }
+  },[]);
+
+  const routine = STRETCH_ROUTINES[activeRoutine];
+  const doneCount = routine.stretches.filter((_,i)=>checked[`${activeRoutine}_${i}`]).length;
+
+  const toggle = (i) => {
+    const k = `${activeRoutine}_${i}`;
+    const updated = {...checked, [k]:!checked[k]};
+    setChecked(updated);
+    LS.set(skey, { checked:updated, routine:activeRoutine, savedAt:new Date().toISOString() });
+  };
+
+  const markAllDone = () => {
+    const updated = {...checked};
+    routine.stretches.forEach((_,i)=>{ updated[`${activeRoutine}_${i}`]=true; });
+    setChecked(updated);
+    setSavedRoutine(activeRoutine);
+    LS.set(skey, { checked:updated, routine:activeRoutine, savedAt:new Date().toISOString() });
+  };
+
+  return (
+    <div style={{paddingBottom:90}}>
+      <div style={{background:"linear-gradient(135deg,#0f172a,#1a1a2e)",padding:"20px 16px 14px",borderBottom:"1px solid #1e293b"}}>
+        <div style={{fontSize:11,color:"#8b5cf6",letterSpacing:2,textTransform:"uppercase",marginBottom:4}}>Recovery</div>
+        <div style={{fontSize:24,fontWeight:800}}>Stretching</div>
+        <div style={{fontSize:13,color:"#64748b"}}>Mobility routines for every training situation</div>
+      </div>
+
+      <div style={{padding:"14px 16px"}}>
+        {/* Routine picker */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:16}}>
+          {Object.entries(STRETCH_ROUTINES).map(([key,r])=>(
+            <button key={key} onClick={()=>{ setActiveRoutine(key); setChecked(c=>c); }}
+              style={{background:activeRoutine===key?r.color+"25":"rgba(255,255,255,0.03)",border:`1px solid ${activeRoutine===key?r.color:"#1e293b"}`,borderRadius:10,padding:"10px 12px",cursor:"pointer",textAlign:"left",transition:"all 0.15s"}}>
+              <div style={{fontSize:18,marginBottom:4}}>{r.icon}</div>
+              <div style={{fontSize:12,fontWeight:700,color:activeRoutine===key?"#e2e8f0":"#94a3b8",lineHeight:1.3}}>{r.label}</div>
+              <div style={{fontSize:10,color:"#475569",marginTop:2}}>⏱ {r.duration}</div>
+            </button>
+          ))}
+        </div>
+
+        {/* Routine header */}
+        <div style={{background:`linear-gradient(135deg,rgba(0,0,0,0.4),${routine.color}15)`,border:`1px solid ${routine.color}40`,borderLeft:`3px solid ${routine.color}`,borderRadius:12,padding:"12px 14px",marginBottom:12}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+            <div style={{fontWeight:700,fontSize:15}}>{routine.icon} {routine.label}</div>
+            <span style={{fontSize:12,color:routine.color,fontWeight:600}}>{doneCount}/{routine.stretches.length}</span>
+          </div>
+          <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.5,marginBottom:10}}>{routine.note}</div>
+          {/* Progress bar */}
+          <div style={{background:"#1e293b",borderRadius:3,height:4,overflow:"hidden"}}>
+            <div style={{background:routine.color,height:"100%",borderRadius:3,width:`${(doneCount/routine.stretches.length)*100}%`,transition:"width 0.3s"}}/>
+          </div>
+        </div>
+
+        {/* Stretches */}
+        <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:12}}>
+          {routine.stretches.map((s,i)=>{
+            const k = `${activeRoutine}_${i}`;
+            const isDone = checked[k];
+            return (
+              <div key={i} onClick={()=>toggle(i)}
+                style={{background:isDone?"rgba(16,185,129,0.08)":"rgba(255,255,255,0.03)",border:`1px solid ${isDone?"#059669":"#1e293b"}`,borderRadius:12,padding:"12px 14px",cursor:"pointer",transition:"all 0.2s"}}>
+                <div style={{display:"flex",alignItems:"flex-start",gap:12}}>
+                  <div style={{width:24,height:24,borderRadius:"50%",background:isDone?"#059669":"transparent",border:`2px solid ${isDone?"#10b981":"#334155"}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1,fontSize:12,color:"#fff",fontWeight:700}}>
+                    {isDone?"✓":""}
+                  </div>
+                  <div style={{flex:1}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                      <div style={{display:"flex",alignItems:"center",gap:6}}>
+                        <span style={{fontSize:16}}>{s.icon}</span>
+                        <span style={{fontWeight:700,fontSize:13,color:isDone?"#86efac":"#e2e8f0"}}>{s.name}</span>
+                      </div>
+                      <span style={{fontSize:11,color:routine.color,fontWeight:600,flexShrink:0}}>{s.duration}</span>
+                    </div>
+                    <div style={{fontSize:12,color:"#64748b",lineHeight:1.5}}>{s.desc}</div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <button onClick={markAllDone}
+          style={{width:"100%",background:doneCount===routine.stretches.length?"#14532d":"linear-gradient(135deg,#7c3aed,#4f46e5)",border:doneCount===routine.stretches.length?"1px solid #16a34a":"none",borderRadius:12,padding:"14px",color:doneCount===routine.stretches.length?"#86efac":"#fff",fontWeight:700,fontSize:15,cursor:"pointer"}}>
+          {doneCount===routine.stretches.length ? "✓ Routine Complete!" : "Mark All Done"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── RETROACTIVE LOG ──────────────────────────────────────────────────────────
+
+function RetroactiveLog({ currentWeek, onClose }) {
+  const realWeek = getCurrentTrainingWeek();
+  const [selectedWeek, setSelectedWeek] = useState(currentWeek);
+  const [selectedDay, setSelectedDay]   = useState(null);
+  const [cardioVal, setCardioVal]       = useState("");
+  const [setLogs, setSetLogs]           = useState({});
+  const [notes, setNotes]               = useState("");
+  const [saved, setSaved]               = useState(false);
+
+  const schedule = WEEK_SCHEDULES[getSchedKey(selectedWeek)];
+  const nonRestSessions = schedule.filter(s=>s.type!=="rest");
+  const ts = selectedDay ? schedule.find(s=>s.day===selectedDay) : null;
+  const skey = ts ? sessionKey(selectedWeek, ts.id) : null;
+
+  useEffect(()=>{
+    if(!skey) return;
+    const d = LS.get(skey);
+    if(d){ setCardioVal(d.cardioVal||""); setSetLogs(d.setLogs||{}); setNotes(d.notes||""); }
+    else { setCardioVal(""); setSetLogs({}); setNotes(""); }
+  },[skey]);
+
+  const save = () => {
+    if(!skey) return;
+    LS.set(skey, { cardioVal, setLogs, done:true, notes, savedAt:new Date().toISOString(), retroactive:true });
+    setSaved(true);
+    setTimeout(()=>{ setSaved(false); onClose(); }, 1500);
+  };
+
+  const style = ts ? (TYPE_STYLE[ts.type]||TYPE_STYLE.rest) : TYPE_STYLE.rest;
+
+  // Only allow past weeks + current week
+  const maxWeek = realWeek;
+
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:200,overflowY:"auto"}}>
+      <div style={{background:"#0d1117",minHeight:"100vh",maxWidth:480,margin:"0 auto",paddingBottom:40}}>
+        {/* Header */}
+        <div style={{background:"linear-gradient(135deg,#0f172a,#1a1a2e)",padding:"20px 16px 14px",borderBottom:"1px solid #1e293b",display:"flex",alignItems:"center",gap:12}}>
+          <button onClick={onClose} style={{background:"#1e293b",border:"none",color:"#94a3b8",borderRadius:8,width:34,height:34,cursor:"pointer",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✕</button>
+          <div>
+            <div style={{fontSize:11,color:"#f59e0b",letterSpacing:2,textTransform:"uppercase",marginBottom:2}}>Retroactive Log</div>
+            <div style={{fontSize:18,fontWeight:800}}>Log a Missed Workout</div>
+          </div>
+        </div>
+
+        <div style={{padding:"16px"}}>
+          {/* Week picker */}
+          <div style={{marginBottom:16}}>
+            <div style={{fontSize:12,color:"#64748b",marginBottom:8}}>Which week?</div>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <button onClick={()=>setSelectedWeek(w=>Math.max(1,w-1))} style={{background:"#1e293b",border:"none",color:"#94a3b8",borderRadius:8,width:36,height:36,cursor:"pointer",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center"}}>‹</button>
+              <div style={{flex:1,background:"rgba(255,255,255,0.04)",border:"1px solid #1e293b",borderRadius:10,padding:"10px",textAlign:"center"}}>
+                <div style={{fontWeight:800,fontSize:18}}>Week {selectedWeek}</div>
+                <div style={{fontSize:11,color:"#475569",marginTop:1}}>{getPhase(selectedWeek).range}</div>
+              </div>
+              <button onClick={()=>setSelectedWeek(w=>Math.min(maxWeek,w+1))} style={{background:"#1e293b",border:"none",color:"#94a3b8",borderRadius:8,width:36,height:36,cursor:"pointer",fontSize:20,display:"flex",alignItems:"center",justifyContent:"center",opacity:selectedWeek>=maxWeek?0.3:1}}>›</button>
+            </div>
+          </div>
+
+          {/* Day picker */}
+          <div style={{marginBottom:16}}>
+            <div style={{fontSize:12,color:"#64748b",marginBottom:8}}>Which session?</div>
+            <div style={{display:"flex",flexDirection:"column",gap:6}}>
+              {nonRestSessions.map(s=>{
+                const isDone = LS.get(sessionKey(selectedWeek,s.id))?.done;
+                const st = TYPE_STYLE[s.type]||TYPE_STYLE.rest;
+                const isSelected = selectedDay===s.day;
+                return (
+                  <button key={s.id} onClick={()=>setSelectedDay(s.day)}
+                    style={{background:isSelected?st.bg:isDone?"rgba(16,185,129,0.08)":"rgba(255,255,255,0.03)",border:`1px solid ${isSelected?st.border:isDone?"#059669":"#1e293b"}`,borderRadius:10,padding:"10px 14px",display:"flex",alignItems:"center",gap:10,cursor:"pointer",textAlign:"left"}}>
+                    <span style={{fontSize:20}}>{s.icon}</span>
+                    <div style={{flex:1}}>
+                      <div style={{display:"flex",alignItems:"center",gap:6}}>
+                        <span style={{fontWeight:700,fontSize:13}}>{s.day}</span>
+                        {isDone && <span style={{background:"#14532d",border:"1px solid #16a34a",borderRadius:20,padding:"1px 7px",fontSize:10,color:"#86efac"}}>✓ logged</span>}
+                      </div>
+                      <div style={{fontSize:12,color:"#94a3b8",marginTop:1}}>{s.title}</div>
+                    </div>
+                    {isSelected && <span style={{color:st.text,fontSize:12}}>✓</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Log form */}
+          {ts && (
+            <div style={{background:style.bg,border:`1px solid ${style.border}`,borderRadius:14,padding:14,marginBottom:12}}>
+              <div style={{fontWeight:700,fontSize:14,marginBottom:12,color:style.text}}>{ts.icon} {ts.title}</div>
+
+              {ts.sets.length>0 && (
+                <div style={{marginBottom:12}}>
+                  <div style={{fontSize:10,color:style.text,letterSpacing:1.5,textTransform:"uppercase",marginBottom:8}}>Weights Used</div>
+                  <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                    {ts.sets.map((s,i)=>(
+                      <div key={i} style={{background:"rgba(0,0,0,0.3)",borderRadius:9,padding:"9px 12px",display:"flex",alignItems:"center",gap:8}}>
+                        <div style={{flex:1}}>
+                          <div style={{fontSize:13,fontWeight:600}}>{s.label}</div>
+                          <div style={{fontSize:11,color:"#475569"}}>{s.reps}</div>
+                        </div>
+                        <input type="number" inputMode="decimal" placeholder="kg"
+                          value={setLogs[`${i}_kg`]||""}
+                          onChange={e=>setSetLogs(p=>({...p,[`${i}_kg`]:e.target.value}))}
+                          style={{width:54,background:"rgba(255,255,255,0.1)",border:`1px solid ${style.border}80`,borderRadius:7,padding:"6px 4px",color:"#e2e8f0",fontSize:14,fontWeight:700,textAlign:"center"}}
+                        />
+                        <button onClick={()=>setSetLogs(p=>({...p,[`${i}_done`]:!p[`${i}_done`]}))}
+                          style={{background:setLogs[`${i}_done`]?"#14532d":"rgba(255,255,255,0.06)",border:`1px solid ${setLogs[`${i}_done`]?"#16a34a":style.border+"50"}`,borderRadius:7,padding:"6px 10px",color:setLogs[`${i}_done`]?"#86efac":style.text,fontSize:11,cursor:"pointer",fontWeight:600}}>
+                          {setLogs[`${i}_done`]?"✓":"Done"}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {ts.cardio && (
+                <div style={{background:"rgba(0,0,0,0.3)",borderRadius:9,padding:12,marginBottom:8}}>
+                  <div style={{fontSize:10,color:style.text,letterSpacing:1.5,textTransform:"uppercase",marginBottom:8}}>{ts.cardio.label}</div>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <input type="number" inputMode="decimal" placeholder={ts.cardio.placeholder}
+                      value={cardioVal} onChange={e=>setCardioVal(e.target.value)}
+                      style={{flex:1,background:"rgba(255,255,255,0.08)",border:`1px solid ${style.border}`,borderRadius:9,padding:"12px",color:"#e2e8f0",fontSize:22,fontWeight:800,textAlign:"center"}}
+                    />
+                    <span style={{fontSize:14,color:style.text,fontWeight:700}}>{ts.cardio.unit}</span>
+                  </div>
+                </div>
+              )}
+
+              <textarea value={notes} onChange={e=>setNotes(e.target.value)}
+                placeholder="Notes — how did it go, what you remember..."
+                style={{width:"100%",background:"rgba(0,0,0,0.3)",border:"1px solid #1e293b",borderRadius:9,padding:"10px 12px",color:"#e2e8f0",fontSize:13,resize:"none",height:64,fontFamily:"inherit",boxSizing:"border-box",marginTop:8}}
+              />
+            </div>
+          )}
+
+          {ts && (
+            <button onClick={save}
+              style={{width:"100%",background:saved?"#14532d":"linear-gradient(135deg,#f59e0b,#d97706)",border:saved?"1px solid #16a34a":"none",borderRadius:12,padding:"15px",color:saved?"#86efac":"#000",fontWeight:800,fontSize:15,cursor:"pointer"}}>
+              {saved ? "✓ Logged!" : `Log Week ${selectedWeek} · ${selectedDay}`}
+            </button>
+          )}
+
+          {!ts && selectedDay===null && (
+            <div style={{textAlign:"center",padding:"20px 0",color:"#334155",fontSize:13}}>Select a week and session above to log it</div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -1582,8 +2186,8 @@ function BottomNav({ tab, setTab }) {
     {id:"today",    icon:"📋", label:"Today"},
     {id:"week",     icon:"🗓",  label:"Week"},
     {id:"progress", icon:"📈", label:"Progress"},
+    {id:"stretch",  icon:"🧘", label:"Stretch"},
     {id:"race",     icon:"🏁", label:"Race"},
-    {id:"notif",    icon:"🔔", label:"Alerts"},
   ];
   return (
     <nav style={{position:"fixed",bottom:0,left:0,right:0,background:"#0d1117",borderTop:"1px solid #1e293b",display:"flex",zIndex:100,paddingBottom:"env(safe-area-inset-bottom)"}}>
@@ -1628,15 +2232,6 @@ function useNotificationChecker(currentWeek) {
 
 // ─── ROOT ─────────────────────────────────────────────────────────────────────
 
-// Week calculation from training start date
-const TRAINING_START = new Date("2026-06-08"); // Monday of week 1
-function getCurrentTrainingWeek() {
-  const now = new Date();
-  const diff = now - TRAINING_START;
-  const week = Math.floor(diff / (1000*60*60*24*7)) + 1;
-  return Math.min(63, Math.max(1, week));
-}
-
 export default function App() {
   const [tab, setTab]                 = useState("today");
   const [currentWeek, setCurrentWeek] = useState(()=>LS.get("im_current_week")||getCurrentTrainingWeek());
@@ -1666,7 +2261,8 @@ export default function App() {
       {tab==="today"    && <TodayView    currentWeek={currentWeek} setCurrentWeek={setCurrentWeek} onPR={(ex,kg)=>{setPrExercise(ex);setPrKg(kg);setPrShow(true);}}/>}
       {tab==="week"     && <WeekView     currentWeek={currentWeek} setCurrentWeek={setCurrentWeek}/>}
       {tab==="progress" && <ProgressView currentWeek={currentWeek} StreakBadge={StreakBadge} StrengthGraphs={StrengthGraphs} RecoveryTracker={RecoveryTracker} RaceCountdown={RaceCountdown}/>}
-      {tab==="race"     && <PreRaceChecklist currentWeek={currentWeek}/>}
+      {tab==="stretch"  && <StretchingView/>}
+      {tab==="race"     && <RaceView currentWeek={currentWeek}/>}
       {tab==="notif"    && <NotificationsView/>}
       <BottomNav tab={tab} setTab={handleTabChange}/>
     </div>
