@@ -1928,7 +1928,7 @@ function RaceView({ currentWeek }) {
 
 // ─── STRETCHING VIEW ─────────────────────────────────────────────────────────
 
-function StretchingView() {
+function StretchingView({ embedded }) {
   const [activeRoutine, setActiveRoutine] = useState("fullBody");
   const [checked, setChecked] = useState({});
   const [savedRoutine, setSavedRoutine] = useState(null);
@@ -1960,14 +1960,14 @@ function StretchingView() {
   };
 
   return (
-    <div style={{paddingBottom:90}}>
-      <div style={{background:"linear-gradient(135deg,#0f172a,#1a1a2e)",padding:"20px 16px 14px",borderBottom:"1px solid #1e293b"}}>
+    <div style={{paddingBottom:embedded?0:90}}>
+      {!embedded && <div style={{background:"linear-gradient(135deg,#0f172a,#1a1a2e)",padding:"20px 16px 14px",borderBottom:"1px solid #1e293b"}}>
         <div style={{fontSize:11,color:"#8b5cf6",letterSpacing:2,textTransform:"uppercase",marginBottom:4}}>Recovery</div>
         <div style={{fontSize:24,fontWeight:800}}>Stretching</div>
         <div style={{fontSize:13,color:"#64748b"}}>Mobility routines for every training situation</div>
-      </div>
+      </div>}
 
-      <div style={{padding:"14px 16px"}}>
+      <div style={{padding:embedded?"0":"14px 16px"}}>
         {/* Routine picker */}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:16}}>
           {Object.entries(STRETCH_ROUTINES).map(([key,r])=>(
@@ -2797,10 +2797,11 @@ function ToolsView({ currentWeek }) {
       {/* Sub-tab nav */}
       <div style={{display:"flex",overflowX:"auto",borderBottom:"1px solid #1e293b",background:"#0d1117"}}>
         {[
-          ["zone2",  "❤️ Zone 2"],
-          ["injury", "🩹 Injury"],
-          ["swim",   "🌊 Swim"],
-          ["brick",  "⚡ Brick"],
+          ["zone2",   "❤️ Zone 2"],
+          ["injury",  "🩹 Injury"],
+          ["swim",    "🌊 Swim"],
+          ["brick",   "⚡ Brick"],
+          ["stretch", "🧘 Stretch"],
         ].map(([id,label])=>(
           <button key={id} onClick={()=>setSubTab(id)}
             style={{flexShrink:0,background:"none",border:"none",borderBottom:subTab===id?"2px solid #7c3aed":"2px solid transparent",color:subTab===id?"#e2e8f0":"#64748b",padding:"12px 16px",fontSize:12,cursor:"pointer",fontWeight:subTab===id?700:400,whiteSpace:"nowrap"}}>
@@ -2810,10 +2811,11 @@ function ToolsView({ currentWeek }) {
       </div>
 
       <div style={{padding:"14px 16px"}}>
-        {subTab==="zone2"  && <Zone2Calculator/>}
-        {subTab==="injury" && <InjuryTracker/>}
-        {subTab==="swim"   && <OWConditionsLog/>}
-        {subTab==="brick"  && <RaceSimTracker/>}
+        {subTab==="zone2"   && <Zone2Calculator/>}
+        {subTab==="injury"  && <InjuryTracker/>}
+        {subTab==="swim"    && <OWConditionsLog/>}
+        {subTab==="brick"   && <RaceSimTracker/>}
+        {subTab==="stretch" && <StretchingView embedded/>}
       </div>
     </div>
   );
@@ -2826,8 +2828,8 @@ function BottomNav({ tab, setTab }) {
     {id:"today",    icon:"📋", label:"Today"},
     {id:"week",     icon:"🗓",  label:"Week"},
     {id:"progress", icon:"📈", label:"Progress"},
-    {id:"stretch",  icon:"🧘", label:"Stretch"},
     {id:"tools",    icon:"🔧", label:"Tools"},
+    {id:"race",     icon:"🏁", label:"Race"},
   ];
   return (
     <nav style={{position:"fixed",bottom:0,left:0,right:0,background:"#0d1117",borderTop:"1px solid #1e293b",display:"flex",zIndex:100,paddingBottom:"env(safe-area-inset-bottom)"}}>
