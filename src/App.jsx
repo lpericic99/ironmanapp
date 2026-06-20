@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
@@ -9,178 +9,281 @@ const PHASES = [
   { id: 4, name: "Taper & Peak",          short: "Taper",      weeks: [57,63], color: "#8b5cf6", dim: "#2e1065", range: "Aug–Sep 2027" },
 ];
 
-const WEEK_SCHEDULES = {
-  "1-8": [
-    { id:"mon-str", day:"Mon", time:"Evening", type:"strength", icon:"🏋️", title:"Strength A — Full Body",
-      sets:[
-        {label:"Back Squat",          reps:"4×8",  note:"~120kg, controlled tempo"},
-        {label:"Romanian Deadlift",   reps:"4×8",  note:"~100kg"},
-        {label:"Bench Press",         reps:"4×8",  note:"~90kg (dial back from 110)"},
-        {label:"Pull-ups",            reps:"4×8",  note:"Bodyweight or assisted"},
-        {label:"Farmer Carry",        reps:"3×40m",note:"Heavy DBs"},
-        {label:"Plank",               reps:"3×45s",note:""},
-      ], cardio:null },
-    { id:"tue-swm", day:"Tue", time:"Morning", type:"swim", icon:"🏊", title:"Swim — Technique",
-      sets:[
-        {label:"Warm-up",       reps:"200m",  note:"Easy freestyle"},
-        {label:"Catch-up drill",reps:"6×50m", note:"30s rest between each"},
-        {label:"Easy sets",     reps:"4×100m",note:"30s rest, focus on stroke"},
-        {label:"Cool-down",     reps:"200m",  note:""},
-      ], cardio:{label:"Total distance", unit:"m",  placeholder:"1200"} },
-    { id:"wed-bik", day:"Wed", time:"Evening", type:"bike", icon:"🚴", title:"Zone 2 Bike + Core",
-      sets:[
-        {label:"Dead bug",  reps:"3×12", note:"Slow, controlled"},
-        {label:"Bird dog",  reps:"3×12", note:"Each side"},
-        {label:"Side plank",reps:"2×30s",note:"Each side"},
-        {label:"Hip bridge",reps:"3×15", note:""},
-      ], cardio:{label:"Ride duration", unit:"min",placeholder:"70"} },
-    { id:"thu-str", day:"Thu", time:"Evening", type:"strength", icon:"🏋️", title:"Strength B — Lower & Posterior",
-      sets:[
-        {label:"Deadlift",              reps:"4×6",  note:"~140kg, not max effort"},
-        {label:"Bulgarian Split Squat", reps:"3×10", note:"Each leg"},
-        {label:"Hip Thrust",            reps:"4×10", note:"~100kg"},
-        {label:"Cable Row",             reps:"3×12", note:"Heavy"},
-        {label:"Lat Pulldown",          reps:"3×12", note:""},
-      ], cardio:null },
-    { id:"fri-run", day:"Fri", time:"Morning", type:"run", icon:"🏃", title:"Run/Walk Intervals",
-      sets:[], cardio:{label:"Total duration", unit:"min",placeholder:"40", note:"2min run / 1min walk × 13 rounds"} },
-    { id:"sat-bik", day:"Sat", time:"Morning", type:"bike", icon:"🚴", title:"Long Ride — Zone 2",
-      sets:[], cardio:{label:"Ride duration", unit:"min",placeholder:"90"} },
-    { id:"sun-rst", day:"Sun", time:"—", type:"rest", icon:"😴", title:"Rest / Active Recovery",
+// ─── WEEK-BY-WEEK SCHEDULES ───────────────────────────────────────────────────
+// Each week has individual targets. Recovery weeks (4,8,12,16,20,24,28,32,36,40,44,48,52,56) are ~80% volume.
+
+function makeWeek(w) {
+  // Helper: is this week an OW summer week?
+  // Weeks 1–16 = Jun–Sep 2026 (summer)
+  // Weeks 17–45 = Oct 2026–Jun 2027 (pool/winter)
+  // Weeks 46–63 = Jul–Sep 2027 (summer again)
+  const isOWSummer = w<=16 || w>=46;
+
+  // ── PHASE 1: Foundation & Fat Loss (weeks 1–16) ── ALL SUMMER / OW ────────
+  if(w<=16) {
+    const isRecovery = w%4===0;
+    // Time-based swim targets for OW (minutes)
+    const swimMin = isRecovery
+      ? [18,22,20,18,22,26,24,22,26,30,28,25,30,34,32,28][w-1]
+      :  [18,22,20,18,22,26,24,22,26,30,28,25,30,34,32,28][w-1];
+    // Run intervals
+    const runRatio = w<=4?"2min run / 1min walk × 13 rounds":w<=8?"3min run / 1min walk × 11 rounds":w<=12?"5min run / 1min walk × 9 rounds":"8min run / 1min walk × 7 rounds";
+    const runMin   = isRecovery?30: w<=4?40:w<=8?45:w<=12?50:55;
+    // Bike
+    const midBike  = isRecovery?50: w<=4?65:w<=8?75:w<=12?85:90;
+    const longBike = isRecovery?60: w<=4?75:w<=8?90:w<=12?105:120;
+    // Strength weights (progressive overload ~2.5kg every 2 weeks)
+    const squat  = 110 + Math.floor((w-1)/2)*2;
+    const rdl    = 90  + Math.floor((w-1)/2)*2;
+    const bench  = 85  + Math.floor((w-1)/2)*2;
+    const dl     = 130 + Math.floor((w-1)/2)*2;
+    const hipThr = 90  + Math.floor((w-1)/2)*2;
+    const pullW  = w<=8?0:5+Math.floor((w-9)/2)*2;
+
+    return [
+      { id:"mon-str", day:"Mon", time:"Evening", type:"strength", icon:"🏋️",
+        title:`Strength A — Full Body${isRecovery?" (Recovery — lighter)":""}`,
+        sets:[
+          {label:"Back Squat",        reps:`4×${isRecovery?6:8}`,  note:`~${squat}kg${isRecovery?", easy tempo":""}` },
+          {label:"Romanian Deadlift", reps:`4×${isRecovery?6:8}`,  note:`~${rdl}kg` },
+          {label:"Bench Press",       reps:`4×${isRecovery?6:8}`,  note:`~${bench}kg` },
+          {label:w<=8?"Pull-ups":"Weighted Pull-ups", reps:`4×${isRecovery?6:8}`, note:w<=8?"Bodyweight":`+${pullW}kg` },
+          {label:"Farmer Carry",      reps:`3×${w<=8?"40":"50"}m`, note:"" },
+          {label:"Plank",             reps:`3×${30+w*2}s`,         note:"" },
+        ], cardio:null },
+      { id:"tue-swm", day:"Tue", time:"Morning", type:"swim", icon:"🏊",
+        title:`OW Swim — ${w<=4?"Technique":w<=8?"Form Focus":w<=12?"Building Pace":"Threshold Intro"} Wk${w}`,
+        sets: w<=4?[
+          {label:"Easy warm-up",   reps:"5 min",  note:"Gentle entry, get comfortable in open water"},
+          {label:"Catch-up drill", reps:"4×1 min",note:"Focus on reach and pull — sight every 8 strokes"},
+          {label:"Easy continuous",reps:"8 min",  note:"Relax stroke, breathe every 3"},
+          {label:"Cool-down",      reps:"3 min",  note:"Easy back to shore"},
+        ]:w<=8?[
+          {label:"Easy warm-up",    reps:"5 min",  note:""},
+          {label:"Rotation drills", reps:"3×2 min",note:"Body rotation, feel the catch"},
+          {label:"Continuous swim", reps:`${swimMin-10} min`, note:"Steady pace, sight every 8 strokes"},
+          {label:"Cool-down",       reps:"3 min",  note:""},
+        ]:w<=12?[
+          {label:"Warm-up",         reps:"5 min",  note:"Easy"},
+          {label:"Build sets",      reps:`3×${Math.round((swimMin-10)/3)} min`, note:"Build pace each rep, 1 min easy between"},
+          {label:"Steady swim",     reps:"8 min",  note:"Comfortable controlled pace"},
+          {label:"Cool-down",       reps:"3 min",  note:""},
+        ]:[
+          {label:"Warm-up",         reps:"5 min",  note:""},
+          {label:"Threshold efforts",reps:`4×${Math.round((swimMin-10)/4)} min`,note:"Solid effort — harder than easy but sustainable"},
+          {label:"Easy cool-down",  reps:"5 min",  note:""},
+        ],
+        cardio:{label:"Total OW swim time", unit:"min", placeholder:String(swimMin),
+          note:"🌊 Open water — time based. Log actual time swum. No need to measure distance."} },
+      { id:"wed-bik", day:"Wed", time:"Evening", type:"bike", icon:"🚴",
+        title:`Zone 2 Bike${w<=8?" + Core":w<=12?" + StairMaster":" + Core"}`,
+        sets: w<=8?[
+          {label:"Dead bug",   reps:"3×12", note:"Slow, controlled"},
+          {label:"Bird dog",   reps:"3×12", note:"Each side"},
+          {label:"Side plank", reps:"2×30s",note:"Each side"},
+          {label:"Hip bridge", reps:"3×15", note:""},
+        ]:w<=12?[]:[ 
+          {label:"Dead bug",       reps:"3×12", note:""},
+          {label:"Pallof press",   reps:"3×12", note:"Each side"},
+          {label:"Side plank",     reps:"3×40s",note:"Each side"},
+          {label:"Hip bridge",     reps:"3×20", note:""},
+        ],
+        cardio:{label:w<=8?"Ride duration":w<=12?"Bike + Stair (min)":"Ride duration", unit:"min", placeholder:String(midBike),
+          note:w<=8?"Full Zone 2 — can hold a full conversation":w<=12?"35min bike then 20min StairMaster":"Zone 2 steady — HR stays conversational"} },
+      { id:"thu-str", day:"Thu", time:"Evening", type:"strength", icon:"🏋️",
+        title:`Strength B — Lower & Posterior${isRecovery?" (Recovery)":""}`,
+        sets:[
+          {label:"Deadlift",             reps:`4×${isRecovery?4:6}`,  note:`~${dl}kg${isRecovery?", easy":""}` },
+          {label:"Bulgarian Split Squat",reps:`3×${isRecovery?8:10}`, note:"Each leg" },
+          {label:"Hip Thrust",           reps:`4×${isRecovery?8:10}`, note:`~${hipThr}kg` },
+          {label:"Cable Row",            reps:`3×${isRecovery?10:12}`,note:"Heavy" },
+          {label:"Lat Pulldown",         reps:`3×${isRecovery?10:12}`,note:"" },
+          ...(w>8?[{label:"Face Pull",   reps:"3×15",                 note:"Light, high reps"}]:[]),
+        ], cardio:null },
+      { id:"fri-run", day:"Fri", time:"Morning", type:"run", icon:"🏃",
+        title:`Run Intervals — Week ${w}`,
+        sets:[], cardio:{label:"Total duration", unit:"min", placeholder:String(runMin), note:runRatio} },
+      { id:"sat-bik", day:"Sat", time:"Morning", type:"bike", icon:"🚴",
+        title:`Long Ride — ${longBike}min${isRecovery?" (Easy Recovery)":""}`,
+        sets:[], cardio:{label:"Ride duration", unit:"min", placeholder:String(longBike),
+          note:w<=8?"All Zone 2, flat terrain":w<=12?"Zone 2, start nutrition practice every 45min":"Zone 2, eat every 40min, building endurance"} },
+      { id:"sun-rst", day:"Sun", time:w<=8?"—":"Morning", type:w<=8?"rest":"swim", icon:w<=8?"😴":"🏊",
+        title:w<=8?"Rest / Active Recovery":`Easy OW Swim — ${Math.round(15+w*1.2)}min`,
+        sets:[], cardio:w<=8?null:{label:"Easy OW swim", unit:"min", placeholder:String(Math.round(15+w*1.2)),
+          note:"🌊 Easy open water recovery — no pace target, just move"} },
+    ];
+  }
+
+  // ── PHASE 2: Build & Specificity (weeks 17–36) ────────────────────────────
+  if(w<=36) {
+    const wInPhase = w-16;
+    const isRecovery = wInPhase%4===0;
+    const swimM   = isRecovery ? 1600 : Math.min(2600, 1800+wInPhase*60);
+    const longBikeKm = isRecovery ? 60  : Math.min(120, 55+wInPhase*4);
+    const runMin  = isRecovery ? 45  : Math.min(90, 45+wInPhase*3);
+    const brickTotal= isRecovery ? 90  : Math.min(185, 100+wInPhase*5);
+    const dl     = Math.min(165, 148+Math.floor(wInPhase/2));
+    const bench  = Math.min(108, 100+Math.floor(wInPhase/3));
+    const pullW  = Math.min(22, 14+Math.floor(wInPhase/3));
+
+    return [
+      { id:"mon-str", day:"Mon", time:"Evening", type:"strength", icon:"🏋️",
+        title:`Strength — Upper / Pull${isRecovery?" (Recovery)":""}`,
+        sets:[
+          {label:"Weighted Pull-ups", reps:`4×${isRecovery?3:5}`,  note:`+${pullW}kg` },
+          {label:"Bench Press",       reps:`4×${isRecovery?3:5}`,  note:`~${bench}kg` },
+          {label:"Cable Row",         reps:`3×${isRecovery?6:8}`,  note:"Heavy" },
+          {label:"OHP",               reps:`3×${isRecovery?6:8}`,  note:"" },
+          {label:"Face Pull",         reps:"3×15",                  note:"" },
+        ], cardio:null },
+      { id:"tue-swm", day:"Tue", time:"Morning", type:"swim", icon:"🏊",
+        title:`Swim — ${wInPhase<=8?"Threshold":"Race Pace"} Week ${w}`,
+        sets:[
+          {label:"Warm-up",     reps:`${wInPhase<=8?"300":"400"}m`, note:"" },
+          {label:"Main sets",   reps:`${wInPhase<=8?`5×200m`:`${Math.min(6,3+Math.floor(wInPhase/5))}×300m`}`, note:"30s rest, controlled effort" },
+          {label:"Fast 100s",   reps:`${wInPhase<=8?"4":"6"}×100m`, note:"Hard" },
+          {label:"Cool-down",   reps:"200m", note:"" },
+        ],
+        cardio:{label:"Total distance", unit:"m", placeholder:String(swimM)} },
+      { id:"wed-brk", day:"Wed", time:"Evening", type:"brick", icon:"⚡",
+        title:`Brick: Bike → Run — Week ${w}`,
+        sets:[], cardio:{label:"Bike + Run total", unit:"min", placeholder:String(brickTotal),
+          note:isRecovery?`Easy brick — ${Math.round(brickTotal*0.75)}min bike + ${Math.round(brickTotal*0.25)}min run`:`${Math.round(brickTotal*0.78)}min bike + ${Math.round(brickTotal*0.22)}min run — no break between`} },
+      { id:"thu-str", day:"Thu", time:"Evening", type:"strength", icon:"🏋️",
+        title:`Strength — Lower Body${isRecovery?" (Recovery)":""}`,
+        sets:[
+          {label:"Deadlift",             reps:`3×${isRecovery?3:5}`,  note:`~${dl}kg` },
+          {label:"Bulgarian Split Squat",reps:`3×${isRecovery?6:8}`,  note:"Each leg" },
+          {label:"Leg Press",            reps:`3×${isRecovery?8:10}`, note:"Heavy" },
+          {label:"Nordic Curl",          reps:`3×${isRecovery?4:6}`,  note:"" },
+          {label:"Hip Thrust",           reps:`3×${isRecovery?8:10}`, note:"" },
+        ], cardio:null },
+      { id:"fri-run", day:"Fri", time:"Morning", type:"run", icon:"🏃",
+        title:`Run — ${wInPhase<=8?"Building to 10K":wInPhase<=16?"10K Consolidation":"Half Marathon Build"} Wk${w}`,
+        sets:[], cardio:{label:"Duration", unit:"min", placeholder:String(runMin),
+          note:isRecovery?"Easy Zone 2 — short and relaxed":wInPhase<=8?"Continuous Zone 2 — building to 10K":wInPhase<=16?"10K at comfortable pace":"Building toward half marathon distance"} },
+      { id:"sat-bik", day:"Sat", time:"Morning", type:"bike", icon:"🚴",
+        title:`Long Ride — ${longBikeKm}km`,
+        sets:[], cardio:{label:"Distance", unit:"km", placeholder:String(longBikeKm),
+          note:isRecovery?"Easy recovery ride":"Zone 2 steady — eat every 40min, hydrate well"} },
+      { id:"sun-run", day:"Sun", time:"Morning", type:"run", icon:"🏃",
+        title:`Long Run — ${Math.round(runMin*0.8)}min Easy`,
+        sets:[], cardio:{label:"Duration", unit:"min", placeholder:String(Math.round(runMin*0.8)),
+          note:"Legs heavy from Saturday ride — run slow, that's the point. Race simulation."} },
+    ];
+  }
+
+  // ── PHASE 3: Race Volume (weeks 37–56) ───────────────────────────────────
+  if(w<=56) {
+    const wInPhase = w-36;
+    const isRecovery = wInPhase%4===0;
+    const isOW = w>=46; // July 2027 onward = summer OW
+    const swimM    = isRecovery ? 2400 : Math.min(4000, 2600+wInPhase*80);
+    const swimMin  = isRecovery ? 45   : Math.min(85, 50+wInPhase*2); // OW time targets
+    const longBikeKm= isRecovery ? 100  : Math.min(175, 100+wInPhase*4);
+    const longRunMin= isRecovery ? 70   : Math.min(135, 75+wInPhase*3);
+    const threshMin = isRecovery ? 50   : Math.min(80,  55+wInPhase*1);
+    const brickTotal= isRecovery ? 170  : Math.min(290, 190+wInPhase*5);
+
+    return [
+      { id:"mon-str", day:"Mon", time:"Evening", type:"strength", icon:"🏋️",
+        title:`Strength — 1× Maintenance${w>=50?" (Last weeks — winding down)":""}`,
+        sets:[
+          {label:"Deadlift",          reps:"3×5", note:`~${Math.min(165,155+Math.floor(wInPhase/4))}kg` },
+          {label:"Bench Press",       reps:"3×5", note:"" },
+          {label:"Weighted Pull-up",  reps:"3×5", note:"" },
+          {label:"Split Squat",       reps:"2×8", note:"Each leg" },
+        ], cardio:null },
+      { id:"tue-swm", day:"Tue", time:"Morning", type:"swim", icon:"🏊",
+        title:isOW?`OW Swim — Long Effort Wk${w}`:`Swim — Long Sets Week ${w}`,
+        sets: isOW?[
+          {label:"Easy warm-up",      reps:"5 min",  note:"Settle into OW, check sighting lines"},
+          {label:"Steady long effort", reps:`${swimMin-15} min`, note:"Controlled pace — harder than easy but sustainable. Sight every 8 strokes."},
+          {label:"Race pace effort",  reps:"5 min",  note:"Push to race pace — practice positive split strategy"},
+          {label:"Easy cool-down",    reps:"5 min",  note:""},
+        ]:[
+          {label:"Warm-up",   reps:`${wInPhase<=8?"500":"600"}m`,  note:"" },
+          {label:"Main sets", reps:`${Math.min(5,3+Math.floor(wInPhase/5))}×${wInPhase<=8?"400":"500"}m`, note:"45s rest, steady effort" },
+          {label:"Cool-down", reps:"200m", note:"" },
+        ],
+        cardio: isOW
+          ? {label:"Total OW swim time", unit:"min", placeholder:String(swimMin), note:"🌊 Open water — time based. No distance needed."}
+          : {label:"Total distance", unit:"m", placeholder:String(swimM)} },
+      { id:"wed-brk", day:"Wed", time:"Evening", type:"brick", icon:"⚡",
+        title:`Big Brick — Week ${w}`,
+        sets:[], cardio:{label:"Bike + Run total", unit:"min", placeholder:String(brickTotal),
+          note:isRecovery?"Recovery brick — shorter effort":`${Math.round(brickTotal*0.77)}min bike + ${Math.round(brickTotal*0.23)}min run — race simulation`} },
+      { id:"thu-run", day:"Thu", time:"Morning", type:"run", icon:"🏃",
+        title:`Threshold Run — Week ${w}`,
+        sets:[], cardio:{label:"Duration", unit:"min", placeholder:String(threshMin),
+          note:isRecovery?"Easy Zone 2 only":`${Math.round(threshMin*0.35)}min Zone 2 warm up → ${Math.round(threshMin*0.35)}min Zone 3 → ${Math.round(threshMin*0.3)}min cool down`} },
+      { id:"fri-swm", day:"Fri", time:"Morning", type:"swim", icon:"🏊",
+        title:`OW Swim — Navigation Wk${w}`,
+        sets:[], cardio:{label:"Duration", unit:"min", placeholder:String(Math.round(35+wInPhase*1.5)),
+          note:"🌊 Sight every 8 strokes. Practice race start pace first 200m then settle."} },
+      { id:"sat-bik", day:"Sat", time:"Morning", type:"bike", icon:"🚴",
+        title:`Long Ride — ${longBikeKm}km`,
+        sets:[], cardio:{label:"Distance", unit:"km", placeholder:String(longBikeKm),
+          note:isRecovery?"Easy recovery ride — Zone 2 only":longBikeKm>=150?"Peak volume ride — eat every 30min, this is race prep":"Zone 2 long ride — nutrition every 40min"} },
+      { id:"sun-run", day:"Sun", time:"Morning", type:"run", icon:"🏃",
+        title:`Long Run — ${longRunMin}min`,
+        sets:[], cardio:{label:"Duration", unit:"min", placeholder:String(longRunMin),
+          note:isRecovery?"Easy recovery run — very slow pace":"Easy pace — legs wrecked from yesterday. That's the adaptation."} },
+    ];
+  }
+
+  // ── PHASE 4: Taper (weeks 57–63) ── ALL SUMMER / OW ─────────────────────
+  const wInTaper = w-56;
+  const bikeMin  = Math.max(45, 90-wInTaper*8);
+  const runMin   = Math.max(25, 55-wInTaper*5);
+  const swimMin  = Math.max(20, 45-wInTaper*5);
+
+  return [
+    { id:"mon-rst", day:"Mon", time:"—", type:"rest", icon:"😴",
+      title:`Full Rest — Taper Week ${wInTaper}`,
       sets:[], cardio:null },
-  ],
-  "9-16": [
-    { id:"mon-str", day:"Mon", time:"Evening", type:"strength", icon:"🏋️", title:"Strength A — Full Body",
+    { id:"tue-swm", day:"Tue", time:"Morning", type:"swim", icon:"🏊",
+      title:`OW Swim — Sharp & Short Wk${w}`,
       sets:[
-        {label:"Back Squat",          reps:"4×8",  note:"~130kg"},
-        {label:"Romanian Deadlift",   reps:"4×8",  note:"~110kg"},
-        {label:"Bench Press",         reps:"4×8",  note:"~95kg"},
-        {label:"Weighted Pull-ups",   reps:"4×6",  note:"+10kg"},
-        {label:"Farmer Carry",        reps:"3×50m",note:""},
-        {label:"Plank",               reps:"3×60s",note:""},
-      ], cardio:null },
-    { id:"tue-swm", day:"Tue", time:"Morning", type:"swim", icon:"🏊", title:"Swim — Building Sets",
-      sets:[
-        {label:"Warm-up",   reps:"300m",  note:"Easy"},
-        {label:"Main sets", reps:"8×100m",note:"20s rest, moderate effort"},
-        {label:"Fast 50s",  reps:"4×50m", note:"Hard effort"},
-        {label:"Cool-down", reps:"200m",  note:""},
-      ], cardio:{label:"Total distance", unit:"m",  placeholder:"1500"} },
-    { id:"wed-cmb", day:"Wed", time:"Evening", type:"bike", icon:"🚴", title:"Bike + StairMaster",
-      sets:[], cardio:{label:"Bike + Stair total", unit:"min",placeholder:"65", note:"45min bike then 20min StairMaster"} },
-    { id:"thu-str", day:"Thu", time:"Evening", type:"strength", icon:"🏋️", title:"Strength B — Lower & Posterior",
-      sets:[
-        {label:"Deadlift",              reps:"4×5",  note:"~150kg"},
-        {label:"Bulgarian Split Squat", reps:"3×10", note:"Each leg"},
-        {label:"Hip Thrust",            reps:"4×12", note:""},
-        {label:"Weighted Row",          reps:"3×10", note:"Heavy"},
-        {label:"Face Pull",             reps:"3×15", note:""},
-        {label:"Pallof Press",          reps:"3×12", note:"Each side"},
-      ], cardio:null },
-    { id:"fri-run", day:"Fri", time:"Morning", type:"run", icon:"🏃", title:"Run Intervals — Building",
-      sets:[], cardio:{label:"Total duration", unit:"min",placeholder:"45", note:"3min run / 1min walk, building to 5/1"} },
-    { id:"sat-bik", day:"Sat", time:"Morning", type:"bike", icon:"🚴", title:"Long Ride — 2hrs",
-      sets:[], cardio:{label:"Ride duration", unit:"min",placeholder:"120", note:"Practice eating on bike every 45min"} },
-    { id:"sun-swm", day:"Sun", time:"Morning", type:"swim", icon:"🏊", title:"Easy OW Swim or Rest",
-      sets:[], cardio:{label:"OW swim duration", unit:"min",placeholder:"25"} },
-  ],
-  "17-28": [
-    { id:"mon-str", day:"Mon", time:"Evening", type:"strength", icon:"🏋️", title:"Strength — Upper / Pull Focus",
-      sets:[
-        {label:"Weighted Pull-ups",reps:"4×5",  note:"+15kg"},
-        {label:"Bench Press",      reps:"4×5",  note:"~100kg, strength focus"},
-        {label:"Cable Row",        reps:"3×8",  note:"Heavy"},
-        {label:"OHP",              reps:"3×8",  note:""},
-        {label:"Face Pull",        reps:"3×15", note:""},
-      ], cardio:null },
-    { id:"tue-swm", day:"Tue", time:"Morning", type:"swim", icon:"🏊", title:"Swim — Threshold Sets",
-      sets:[
-        {label:"Warm-up",   reps:"400m",  note:""},
-        {label:"Main sets", reps:"5×200m",note:"30s rest, moderate-hard"},
-        {label:"Fast 100s", reps:"4×100m",note:"Hard effort"},
-        {label:"Cool-down", reps:"200m",  note:""},
-      ], cardio:{label:"Total distance", unit:"m",  placeholder:"2000"} },
-    { id:"wed-brk", day:"Wed", time:"Evening", type:"brick", icon:"⚡", title:"Brick: Bike → Run",
-      sets:[], cardio:{label:"Bike + Run total", unit:"min",placeholder:"115", note:"90min bike then 25min run, no break"} },
-    { id:"thu-str", day:"Thu", time:"Evening", type:"strength", icon:"🏋️", title:"Strength — Lower Body",
-      sets:[
-        {label:"Deadlift",              reps:"3×5",  note:"~155–160kg"},
-        {label:"Bulgarian Split Squat", reps:"3×8",  note:"Each leg"},
-        {label:"Leg Press",             reps:"3×10", note:"Heavy"},
-        {label:"Nordic Curl",           reps:"3×6",  note:"Assisted if needed"},
-        {label:"Hip Thrust",            reps:"3×10", note:""},
-      ], cardio:null },
-    { id:"fri-run", day:"Fri", time:"Morning", type:"run", icon:"🏃", title:"Run — Building to 10K",
-      sets:[], cardio:{label:"Duration", unit:"min",placeholder:"60", note:"Continuous easy Zone 2 run"} },
-    { id:"sat-bik", day:"Sat", time:"Morning", type:"bike", icon:"🚴", title:"Long Ride — 2.5–3hrs",
-      sets:[], cardio:{label:"Distance", unit:"km", placeholder:"85",  note:"Nutrition every 40min"} },
-    { id:"sun-swm", day:"Sun", time:"Morning", type:"swim", icon:"🏊", title:"OW Swim / Easy Pool",
-      sets:[], cardio:{label:"Duration", unit:"min",placeholder:"40",  note:"Easy recovery swim"} },
-  ],
-  "29-36": [
-    { id:"mon-str", day:"Mon", time:"Evening", type:"strength", icon:"🏋️", title:"Strength — Full Body Maintenance",
-      sets:[
-        {label:"Deadlift",         reps:"3×5",note:"~160kg"},
-        {label:"Bench Press",      reps:"3×5",note:"~105kg"},
-        {label:"Weighted Pull-up", reps:"3×5",note:""},
-        {label:"Split Squat",      reps:"3×8",note:"Each leg"},
-      ], cardio:null },
-    { id:"tue-swm", day:"Tue", time:"Morning", type:"swim", icon:"🏊", title:"Swim — Race Pace",
-      sets:[
-        {label:"Warm-up",   reps:"500m",  note:""},
-        {label:"Race pace", reps:"3×400m",note:"45s rest, goal effort"},
-        {label:"Cool-down", reps:"200m",  note:""},
-      ], cardio:{label:"Total distance", unit:"m",  placeholder:"2100"} },
-    { id:"wed-brk", day:"Wed", time:"Evening", type:"brick", icon:"⚡", title:"Big Brick: Bike → Run",
-      sets:[], cardio:{label:"Bike + Run total", unit:"min",placeholder:"155", note:"2hr bike + 35min run"} },
-    { id:"thu-run", day:"Thu", time:"Morning", type:"run", icon:"🏃", title:"Midweek Run",
-      sets:[], cardio:{label:"Duration", unit:"min",placeholder:"65",  note:"Full Zone 2, building half marathon"} },
-    { id:"fri-rst", day:"Fri", time:"—", type:"rest", icon:"😴", title:"Rest / Light Swim",
+        {label:"Easy warm-up",    reps:"5 min",  note:"Get in, settle, feel the water"},
+        {label:"Race pace bursts",reps:`3×3 min`, note:"Race effort with 2 min easy between — feel fast"},
+        {label:"Easy cool-down",  reps:"5 min",  note:""},
+      ],
+      cardio:{label:"Total OW swim time", unit:"min", placeholder:String(swimMin),
+        note:"🌊 Open water — time based. Feel fast and smooth, not grinding."} },
+    { id:"wed-bik", day:"Wed", time:"Evening", type:"bike", icon:"🚴",
+      title:`Bike — ${bikeMin}min, Stay Sharp`,
+      sets:[], cardio:{label:"Duration", unit:"min", placeholder:String(bikeMin),
+        note:`${Math.round(bikeMin*0.7)}min easy + ${Math.round(bikeMin*0.3)}min race pace efforts`} },
+    { id:"thu-run", day:"Thu", time:"Morning", type:"run", icon:"🏃",
+      title:`Easy Run — ${runMin}min`,
+      sets:[], cardio:{label:"Duration", unit:"min", placeholder:String(runMin),
+        note:wInTaper>=5?"Short and easy. Legs should feel springy.":"Keep it easy — absorbing the training."} },
+    { id:"fri-swm", day:"Fri", time:"Morning", type:"swim", icon:"🏊",
+      title:`OW Shake-Out${w>=62?" — Race Week":""}`,
+      sets:[], cardio:{label:"Duration", unit:"min", placeholder:String(Math.max(15,30-wInTaper*3)),
+        note:"🌊 Easy open water. Visualise your race swim. You know this water."} },
+    { id:"sat-brk", day:"Sat", time:"Morning", type:"brick", icon:"⚡",
+      title:w>=62?"Race Simulation Brick — Final":"Brick — Stay Sharp",
+      sets:[], cardio:{label:"Bike + Run total", unit:"min", placeholder:String(Math.max(60,130-wInTaper*15)),
+        note:`${Math.max(40,90-wInTaper*10)}min bike + ${Math.max(20,40-wInTaper*5)}min run. Full race kit.`} },
+    { id:"sun-rst", day:"Sun", time:"—", type:"rest", icon:"😴",
+      title:w===63?"REST — RACE TOMORROW 🏁":"Full Rest",
       sets:[], cardio:null },
-    { id:"sat-bik", day:"Sat", time:"Morning", type:"bike", icon:"🚴", title:"Long Ride — 3–3.5hrs",
-      sets:[], cardio:{label:"Distance", unit:"km", placeholder:"105", note:"Target 100–110km"} },
-    { id:"sun-run", day:"Sun", time:"Morning", type:"run", icon:"🏃", title:"Long Run",
-      sets:[], cardio:{label:"Duration", unit:"min",placeholder:"85",  note:"Easy pace — heavy legs from Saturday"} },
-  ],
-  "37-56": [
-    { id:"mon-str", day:"Mon", time:"Evening", type:"strength", icon:"🏋️", title:"Strength — 1× Weekly Only",
-      sets:[
-        {label:"Deadlift",         reps:"3×5",note:"~160kg, maintenance"},
-        {label:"Bench Press",      reps:"3×5",note:""},
-        {label:"Weighted Pull-up", reps:"3×5",note:""},
-        {label:"Split Squat",      reps:"2×8",note:""},
-      ], cardio:null },
-    { id:"tue-swm", day:"Tue", time:"Morning", type:"swim", icon:"🏊", title:"Swim — Long Sets",
-      sets:[
-        {label:"Warm-up",   reps:"600m",  note:""},
-        {label:"Main sets", reps:"4×500m",note:"45s rest, steady effort"},
-        {label:"Cool-down", reps:"200m",  note:""},
-      ], cardio:{label:"Total distance", unit:"m",  placeholder:"3000"} },
-    { id:"wed-brk", day:"Wed", time:"Evening", type:"brick", icon:"⚡", title:"Big Brick Simulation",
-      sets:[], cardio:{label:"Bike + Run total", unit:"min",placeholder:"205", note:"2.5–3hr bike then 40–45min run"} },
-    { id:"thu-run", day:"Thu", time:"Morning", type:"run", icon:"🏃", title:"Threshold Run",
-      sets:[], cardio:{label:"Duration", unit:"min",placeholder:"65",  note:"20min at Zone 3 in the middle"} },
-    { id:"fri-swm", day:"Fri", time:"Morning", type:"swim", icon:"🏊", title:"OW Swim — Navigation",
-      sets:[], cardio:{label:"Duration", unit:"min",placeholder:"50",  note:"Practice sighting every 10 strokes"} },
-    { id:"sat-bik", day:"Sat", time:"Morning", type:"bike", icon:"🚴", title:"Long Ride — Race Distance Build",
-      sets:[], cardio:{label:"Distance", unit:"km", placeholder:"140", note:"Target 130–160km by peak weeks"} },
-    { id:"sun-run", day:"Sun", time:"Morning", type:"run", icon:"🏃", title:"Long Run — Race Build",
-      sets:[], cardio:{label:"Duration", unit:"min",placeholder:"105", note:"Easy pace — half marathon by week 50"} },
-  ],
-  "57-63": [
-    { id:"mon-rst", day:"Mon", time:"—",      type:"rest",     icon:"😴", title:"Full Rest — Taper Starts",   sets:[], cardio:null },
-    { id:"tue-swm", day:"Tue", time:"Morning",type:"swim",     icon:"🏊", title:"Swim — Short & Sharp",
-      sets:[], cardio:{label:"Total distance", unit:"m",  placeholder:"1800", note:"Feel fast, not grinding"} },
-    { id:"wed-bik", day:"Wed", time:"Evening",type:"bike",     icon:"🚴", title:"Bike — Springy Legs",
-      sets:[], cardio:{label:"Duration", unit:"min",placeholder:"70", note:"2–3 race pace efforts inside easy ride"} },
-    { id:"thu-run", day:"Thu", time:"Morning",type:"run",      icon:"🏃", title:"Easy Run — Stay Loose",
-      sets:[], cardio:{label:"Duration", unit:"min",placeholder:"40", note:"Nothing more. The hay is in the barn."} },
-    { id:"fri-swm", day:"Fri", time:"Morning",type:"swim",     icon:"🏊", title:"OW Shake-Out",
-      sets:[], cardio:{label:"Duration", unit:"min",placeholder:"30", note:"Visualise the race."} },
-    { id:"sat-brk", day:"Sat", time:"Morning",type:"brick",    icon:"⚡", title:"Race Simulation Brick",
-      sets:[], cardio:{label:"Bike + Run total", unit:"min",placeholder:"80", note:"60min bike + 20min run. Full kit."} },
-    { id:"sun-rst", day:"Sun", time:"—",      type:"rest",     icon:"😴", title:"Rest — One Week to Race",    sets:[], cardio:null },
-  ],
+  ];
+}
+
+// Build schedule cache for all 63 weeks
+const WEEK_SCHEDULES = {};
+for(let w=1; w<=63; w++) WEEK_SCHEDULES[w] = makeWeek(w);
+
+const TYPE_STYLE = {
+  strength:{ bg:"#1e3a5f", border:"#2563eb", text:"#93c5fd" },
+  swim:    { bg:"#164e63", border:"#0891b2", text:"#67e8f9" },
+  bike:    { bg:"#14532d", border:"#16a34a", text:"#86efac" },
+  run:     { bg:"#431407", border:"#ea580c", text:"#fb923c" },
+  brick:   { bg:"#1a1a2e", border:"#7c3aed", text:"#c084fc" },
+  rest:    { bg:"#1c1917", border:"#57534e", text:"#a8a29e" },
 };
 
 const TYPE_STYLE = {
@@ -238,14 +341,7 @@ function sessionKey(week, id) { return `im_w${week}_${id}`; }
 // ─── COMPONENTS ──────────────────────────────────────────────────────────────
 
 function getPhase(w) { return PHASES.find(p => w >= p.weeks[0] && w <= p.weeks[1]) || PHASES[0]; }
-function getSchedKey(w) {
-  if(w<=8)  return "1-8";
-  if(w<=16) return "9-16";
-  if(w<=28) return "17-28";
-  if(w<=36) return "29-36";
-  if(w<=56) return "37-56";
-  return "57-63";
-}
+function getSchedKey(w) { return Math.min(63, Math.max(1, w)); }
 
 // Week calculation from training start date
 const TRAINING_START = new Date("2026-06-08");
@@ -443,6 +539,17 @@ function TodayView({ currentWeek, setCurrentWeek, onPR }) {
     else { setMode("normal"); setTravelMode(null); }
   }, [skey, travelKey]);
 
+  // Auto-persist every change to set logs, cardio, and notes — so nothing is lost on navigation
+  const autoSaveRef = useRef(false);
+  useEffect(() => {
+    if(!skey) return;
+    // Skip the very first run right after loading from storage (avoids overwriting with empty initial state)
+    if(!autoSaveRef.current) { autoSaveRef.current = true; return; }
+    const existing = LS.get(skey) || {};
+    LS.set(skey, { ...existing, cardioVal, setLogs, notes, done: existing.done||false });
+  }, [cardioVal, setLogs, notes]);
+  useEffect(() => { autoSaveRef.current = false; }, [skey]);
+
   const save = () => {
     if(!skey) return;
     // PR detection — compare each logged kg against all previous logs for that exercise
@@ -454,7 +561,7 @@ function TodayView({ currentWeek, setCurrentWeek, onPR }) {
         let prevMax = 0;
         for(let w=1; w<=63; w++) {
           if(w===currentWeek) continue;
-          const sc = WEEK_SCHEDULES[w<=8?"1-8":w<=16?"9-16":w<=28?"17-28":w<=36?"29-36":w<=56?"37-56":"57-63"];
+          const sc = WEEK_SCHEDULES[getSchedKey(w)];
           sc.forEach(sess => {
             const d = LS.get(sessionKey(w,sess.id));
             if(!d||!d.setLogs) return;
@@ -2720,36 +2827,87 @@ function RaceSimTracker() {
 
 function WeatherLog({ sessionKeyStr }) {
   const wkey = `im_weather_${sessionKeyStr}`;
-  const [temp,  setTemp]  = useState(()=>LS.get(wkey)?.temp||"");
-  const [cond,  setCond]  = useState(()=>LS.get(wkey)?.cond||"");
-  const [saved, setSaved] = useState(!!LS.get(wkey));
+  const [temp,   setTemp]   = useState(()=>LS.get(wkey)?.temp||"");
+  const [cond,   setCond]   = useState(()=>LS.get(wkey)?.cond||"");
+  const [status, setStatus] = useState(LS.get(wkey) ? "done" : "idle"); // idle|loading|done|error|denied
+  const fetchedRef = useRef(!!LS.get(wkey));
 
-  const CONDITIONS_W = ["☀️ Sunny","⛅ Cloudy","🌧 Rain","💨 Windy","🥵 Hot","❄️ Cold"];
-
-  const save = (t, c) => {
-    LS.set(wkey, {temp:t, cond:c});
-    setSaved(true);
+  const WMO_MAP = {
+    0:"☀️ Clear",1:"🌤 Mostly Clear",2:"⛅ Cloudy",3:"☁️ Overcast",
+    45:"🌫 Fog",48:"🌫 Fog",
+    51:"🌦 Drizzle",53:"🌦 Drizzle",55:"🌦 Drizzle",
+    61:"🌧 Rain",63:"🌧 Rain",65:"🌧 Heavy Rain",
+    71:"🌨 Snow",73:"🌨 Snow",75:"🌨 Heavy Snow",
+    80:"🌦 Showers",81:"🌦 Showers",82:"⛈ Heavy Showers",
+    95:"⛈ Thunderstorm",96:"⛈ Thunderstorm",99:"⛈ Thunderstorm",
   };
+
+  const fetchWeather = () => {
+    if(!navigator.geolocation) { setStatus("error"); return; }
+    setStatus("loading");
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const { latitude, longitude } = pos.coords;
+          const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code&timezone=auto`);
+          const data = await res.json();
+          const t = Math.round(data?.current?.temperature_2m);
+          const code = data?.current?.weather_code;
+          const condition = WMO_MAP[code] || "🌡 Unknown";
+          setTemp(String(t));
+          setCond(condition);
+          LS.set(wkey, { temp:String(t), cond:condition, auto:true, fetchedAt:new Date().toISOString() });
+          setStatus("done");
+        } catch(e) { setStatus("error"); }
+      },
+      () => setStatus("denied"),
+      { timeout:8000 }
+    );
+  };
+
+  useEffect(() => {
+    if(!fetchedRef.current) {
+      fetchedRef.current = true;
+      fetchWeather();
+    }
+  }, []);
 
   return (
     <div style={{background:"rgba(0,0,0,0.2)",borderRadius:10,padding:12,marginBottom:12}}>
-      <div style={{fontSize:11,color:"#64748b",letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Session weather</div>
-      <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
-        <input type="number" inputMode="decimal" placeholder="°C" value={temp}
-          onChange={e=>{ setTemp(e.target.value); save(e.target.value,cond); }}
-          style={{width:64,background:"rgba(255,255,255,0.08)",border:"1px solid #334155",borderRadius:7,padding:"6px 8px",color:"#e2e8f0",fontSize:16,fontWeight:700,textAlign:"center"}}
-        />
-        <span style={{color:"#64748b",fontSize:12}}>°C</span>
-        <div style={{flex:1,display:"flex",gap:4,flexWrap:"wrap"}}>
-          {CONDITIONS_W.map(c=>(
-            <button key={c} onClick={()=>{ setCond(c); save(temp,c); }}
-              style={{background:cond===c?"rgba(124,58,237,0.3)":"rgba(255,255,255,0.04)",border:`1px solid ${cond===c?"#7c3aed":"#1e293b"}`,borderRadius:6,padding:"4px 8px",color:cond===c?"#c084fc":"#64748b",fontSize:11,cursor:"pointer"}}>
-              {c}
-            </button>
-          ))}
-        </div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+        <div style={{fontSize:11,color:"#64748b",letterSpacing:1,textTransform:"uppercase"}}>Session weather</div>
+        {status!=="loading" && (
+          <button onClick={fetchWeather} style={{background:"none",border:"none",color:"#7c3aed",fontSize:11,cursor:"pointer",display:"flex",alignItems:"center",gap:3}}>
+            🔄 Refresh
+          </button>
+        )}
       </div>
-      {saved && temp && <div style={{fontSize:10,color:"#334155"}}>{temp}°C · {cond}</div>}
+
+      {status==="loading" && (
+        <div style={{display:"flex",alignItems:"center",gap:8,color:"#64748b",fontSize:13,padding:"6px 0"}}>
+          <span style={{display:"inline-block",animation:"spin 1s linear infinite"}}>🌐</span> Fetching local weather...
+        </div>
+      )}
+
+      {status==="done" && temp && (
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <div style={{fontSize:24,fontWeight:800,color:"#e2e8f0"}}>{temp}°C</div>
+          <div style={{fontSize:13,color:"#94a3b8"}}>{cond}</div>
+          <div style={{marginLeft:"auto",fontSize:9,color:"#334155"}}>📍 auto-detected</div>
+        </div>
+      )}
+
+      {status==="denied" && (
+        <div style={{fontSize:12,color:"#92400e",lineHeight:1.5}}>
+          Location access denied. Enable location permission for this app in your browser/phone settings to auto-fetch weather, or it'll just stay blank.
+        </div>
+      )}
+
+      {status==="error" && (
+        <div style={{fontSize:12,color:"#92400e",lineHeight:1.5}}>
+          Couldn't fetch weather right now. Tap Refresh to try again.
+        </div>
+      )}
     </div>
   );
 }
