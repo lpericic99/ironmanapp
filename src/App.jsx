@@ -1296,7 +1296,7 @@ function StrengthGraphs() {
   // Collect all logs from localStorage
   const allLogs = [];
   for(let w=1; w<=63; w++) {
-    const sched = WEEK_SCHEDULES[w<=8?"1-8":w<=16?"9-16":w<=28?"17-28":w<=36?"29-36":w<=56?"37-56":"57-63"];
+    const sched = WEEK_SCHEDULES[getSchedKey(w)];
     sched.forEach(s => {
       const data = LS.get(sessionKey(w, s.id));
       if(!data || !data.setLogs) return;
@@ -1473,7 +1473,7 @@ function RecoveryTracker({ currentWeek }) {
 function StreakBadge({ currentWeek }) {
   // Always show stats for the REAL current training week, not whatever week is being browsed
   const realWeek = getCurrentTrainingWeek();
-  const sched = WEEK_SCHEDULES[realWeek<=8?"1-8":realWeek<=16?"9-16":realWeek<=28?"17-28":realWeek<=36?"29-36":realWeek<=56?"37-56":"57-63"];
+  const sched = WEEK_SCHEDULES[getSchedKey(realWeek)];
   const nonRest = sched.filter(s=>s.type!=="rest");
   const done = nonRest.filter(s=>LS.get(sessionKey(realWeek,s.id))?.done).length;
   const travelDone = nonRest.filter(s=>{
@@ -1486,7 +1486,7 @@ function StreakBadge({ currentWeek }) {
   // Streak counts only past weeks that are fully in the past
   let streak = 0;
   for(let w=realWeek; w>=1; w--) {
-    const sc = WEEK_SCHEDULES[w<=8?"1-8":w<=16?"9-16":w<=28?"17-28":w<=36?"29-36":w<=56?"37-56":"57-63"];
+    const sc = WEEK_SCHEDULES[getSchedKey(w)];
     const nr = sc.filter(s=>s.type!=="rest");
     const d  = nr.filter(s=>LS.get(sessionKey(w,s.id))?.done).length;
     if(d >= Math.ceil(nr.length*0.6)) streak++; else if(w<realWeek) break;
@@ -3148,7 +3148,7 @@ function useNotificationChecker(currentWeek) {
     const fired   = LS.get(todayKey) || {};
 
     const dayNames = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-    const sched = WEEK_SCHEDULES[currentWeek<=8?"1-8":currentWeek<=16?"9-16":currentWeek<=28?"17-28":currentWeek<=36?"29-36":currentWeek<=56?"37-56":"57-63"];
+    const sched = WEEK_SCHEDULES[getSchedKey(currentWeek)];
     const todaySession = sched.find(s=>s.day===dayNames[now.getDay()]);
     const isLogged = todaySession ? LS.get(sessionKey(currentWeek,todaySession.id))?.done : false;
 
