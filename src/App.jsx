@@ -286,15 +286,6 @@ const TYPE_STYLE = {
   rest:    { bg:"#1c1917", border:"#57534e", text:"#a8a29e" },
 };
 
-const TYPE_STYLE = {
-  strength:{ bg:"#1e3a5f", border:"#2563eb", text:"#93c5fd" },
-  swim:    { bg:"#164e63", border:"#0891b2", text:"#67e8f9" },
-  bike:    { bg:"#14532d", border:"#16a34a", text:"#86efac" },
-  run:     { bg:"#431407", border:"#ea580c", text:"#fb923c" },
-  brick:   { bg:"#1a1a2e", border:"#7c3aed", text:"#c084fc" },
-  rest:    { bg:"#1c1917", border:"#57534e", text:"#a8a29e" },
-};
-
 const MILESTONES = [
   {week:4,  label:"Swim 800m continuous",           phase:1},
   {week:8,  label:"Run 20 min no walk breaks",       phase:1},
