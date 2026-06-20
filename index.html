@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Ironman 2027" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <link rel="icon" href="/favicon.png" />
+    <link rel="icon" href="/favicon.ico" />
     <title>Ironman 2027 Tracker</title>
     <style>
       * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -16,6 +16,7 @@
       #root { min-height: 100vh; min-height: 100dvh; }
       input, textarea, button { font-family: inherit; }
       ::-webkit-scrollbar { display: none; }
+      @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     </style>
   </head>
   <body>
