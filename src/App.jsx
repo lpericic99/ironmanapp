@@ -2951,6 +2951,7 @@ function ToolsView({ currentWeek }) {
           ["swim",    "🌊 Swim"],
           ["brick",   "⚡ Brick"],
           ["stretch", "🧘 Stretch"],
+          ["backup",  "💾 Backup"],
         ].map(([id,label])=>(
           <button key={id} onClick={()=>setSubTab(id)}
             style={{flexShrink:0,background:"none",border:"none",borderBottom:subTab===id?"2px solid #7c3aed":"2px solid transparent",color:subTab===id?"#e2e8f0":"#64748b",padding:"12px 16px",fontSize:12,cursor:"pointer",fontWeight:subTab===id?700:400,whiteSpace:"nowrap"}}>
@@ -2965,6 +2966,147 @@ function ToolsView({ currentWeek }) {
         {subTab==="swim"    && <OWConditionsLog/>}
         {subTab==="brick"   && <RaceSimTracker/>}
         {subTab==="stretch" && <StretchingView embedded/>}
+        {subTab==="backup"  && <BackupView/>}
+      </div>
+    </div>
+  );
+}
+
+// ─── BACKUP / EXPORT / IMPORT ─────────────────────────────────────────────────
+
+function BackupView() {
+  const [status, setStatus] = useState("idle"); // idle|exported|imported|error
+  const [importText, setImportText] = useState("");
+  const [showImport, setShowImport] = useState(false);
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    try {
+      let keys = 0;
+      for(let i=0;i<localStorage.length;i++){ if(localStorage.key(i).startsWith("im_")) keys++; }
+      setStats({ keys });
+    } catch(e) {}
+  }, [status]);
+
+  const exportData = () => {
+    try {
+      const data = {};
+      for(let i=0;i<localStorage.length;i++){
+        const key = localStorage.key(i);
+        if(key.startsWith("im_")) data[key] = localStorage.getItem(key);
+      }
+      const json = JSON.stringify(data, null, 2);
+      const blob = new Blob([json], { type:"application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `ironman-backup-${new Date().toISOString().split("T")[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setStatus("exported");
+      setTimeout(()=>setStatus("idle"), 3000);
+    } catch(e) { setStatus("error"); }
+  };
+
+  const copyToClipboard = async () => {
+    try {
+      const data = {};
+      for(let i=0;i<localStorage.length;i++){
+        const key = localStorage.key(i);
+        if(key.startsWith("im_")) data[key] = localStorage.getItem(key);
+      }
+      const json = JSON.stringify(data);
+      await navigator.clipboard.writeText(json);
+      setStatus("exported");
+      setTimeout(()=>setStatus("idle"), 3000);
+    } catch(e) { setStatus("error"); }
+  };
+
+  const importData = () => {
+    try {
+      const data = JSON.parse(importText);
+      let count = 0;
+      Object.entries(data).forEach(([k,v]) => {
+        if(k.startsWith("im_")) { localStorage.setItem(k, v); count++; }
+      });
+      setStatus("imported");
+      setImportText("");
+      setShowImport(false);
+      setTimeout(()=>{ setStatus("idle"); window.location.reload(); }, 1500);
+    } catch(e) { setStatus("error"); }
+  };
+
+  const handleFileImport = (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setImportText(ev.target.result);
+      setShowImport(true);
+    };
+    reader.readAsText(file);
+  };
+
+  return (
+    <div>
+      <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid #1e293b",borderRadius:14,padding:16,marginBottom:14}}>
+        <div style={{fontWeight:700,fontSize:15,marginBottom:4}}>💾 Backup Your Data</div>
+        <div style={{fontSize:12,color:"#64748b",marginBottom:14}}>
+          {stats ? `${stats.keys} data entries stored on this device` : "Checking storage..."}
+        </div>
+
+        <div style={{background:"rgba(245,158,11,0.08)",border:"1px solid #92400e",borderRadius:10,padding:"10px 14px",fontSize:12,color:"#fcd34d",lineHeight:1.6,marginBottom:14}}>
+          ⚠️ Your data lives only on this device/browser. Changing the site URL, switching phones, or clearing browser data will NOT carry your data over automatically. Export regularly, especially before any app reinstall or URL change.
+        </div>
+
+        <button onClick={exportData}
+          style={{width:"100%",background:status==="exported"?"#14532d":"linear-gradient(135deg,#7c3aed,#4f46e5)",border:status==="exported"?"1px solid #16a34a":"none",borderRadius:10,padding:"13px",color:status==="exported"?"#86efac":"#fff",fontWeight:700,fontSize:14,cursor:"pointer",marginBottom:8}}>
+          {status==="exported" ? "✓ Downloaded!" : "📥 Download Backup File"}
+        </button>
+
+        <button onClick={copyToClipboard}
+          style={{width:"100%",background:"rgba(255,255,255,0.04)",border:"1px solid #1e293b",borderRadius:10,padding:"11px",color:"#94a3b8",fontWeight:600,fontSize:13,cursor:"pointer"}}>
+          📋 Copy Backup to Clipboard
+        </button>
+      </div>
+
+      <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid #1e293b",borderRadius:14,padding:16}}>
+        <div style={{fontWeight:700,fontSize:15,marginBottom:4}}>📤 Restore From Backup</div>
+        <div style={{fontSize:12,color:"#64748b",marginBottom:14}}>Load a previously exported backup file into this device</div>
+
+        <input type="file" accept=".json" id="backup-file-input" onChange={handleFileImport} style={{display:"none"}}/>
+        <button onClick={()=>document.getElementById("backup-file-input").click()}
+          style={{width:"100%",background:"rgba(255,255,255,0.04)",border:"1px solid #1e293b",borderRadius:10,padding:"11px",color:"#94a3b8",fontWeight:600,fontSize:13,cursor:"pointer",marginBottom:8}}>
+          📁 Choose Backup File
+        </button>
+
+        <button onClick={()=>setShowImport(!showImport)}
+          style={{width:"100%",background:"none",border:"none",color:"#7c3aed",fontSize:12,cursor:"pointer",padding:"4px 0"}}>
+          {showImport ? "Hide paste box" : "Or paste backup text instead"}
+        </button>
+
+        {showImport && (
+          <>
+            <textarea value={importText} onChange={e=>setImportText(e.target.value)}
+              placeholder="Paste your exported backup JSON here..."
+              style={{width:"100%",background:"rgba(255,255,255,0.06)",border:"1px solid #334155",borderRadius:8,padding:"10px 12px",color:"#e2e8f0",fontSize:12,resize:"none",height:100,fontFamily:"monospace",boxSizing:"border-box",marginTop:8,marginBottom:8}}
+            />
+            <button onClick={importData} disabled={!importText}
+              style={{width:"100%",background:status==="imported"?"#14532d":!importText?"#1e293b":"#16a34a",border:status==="imported"?"1px solid #22c55e":"none",borderRadius:10,padding:"12px",color:status==="imported"?"#86efac":!importText?"#475569":"#fff",fontWeight:700,fontSize:14,cursor:!importText?"default":"pointer"}}>
+              {status==="imported" ? "✓ Restored! Reloading..." : "Restore This Data"}
+            </button>
+          </>
+        )}
+
+        {status==="error" && (
+          <div style={{marginTop:8,fontSize:12,color:"#fca5a5"}}>Something went wrong — make sure the file/text is a valid backup.</div>
+        )}
+      </div>
+
+      <div style={{marginTop:14,background:"rgba(37,99,235,0.08)",border:"1px solid #1e3a5f",borderRadius:10,padding:"10px 14px",fontSize:12,color:"#93c5fd",lineHeight:1.6}}>
+        💡 <strong>Moving to a new URL?</strong> Export here on the OLD url first, then open the NEW url, come to this same screen, and restore the file. Takes 30 seconds and keeps everything.
       </div>
     </div>
   );
