@@ -632,6 +632,9 @@ function TodayView({ currentWeek, setCurrentWeek, onPR }) {
       {showRetro && <RetroactiveLog currentWeek={currentWeek} onClose={()=>setShowRetro(false)}/>}
 
       <div style={{padding:"14px 16px"}}>
+        {/* Dashboard summary strip */}
+        <DashboardStrip currentWeek={currentWeek}/>
+
         {/* Missed workout button */}
         <button onClick={()=>setShowRetro(true)}
           style={{width:"100%",background:"rgba(245,158,11,0.08)",border:"1px solid #92400e",borderRadius:10,padding:"9px 14px",marginBottom:12,display:"flex",alignItems:"center",gap:10,cursor:"pointer",textAlign:"left"}}>
@@ -944,6 +947,7 @@ function WeekView({ currentWeek, setCurrentWeek }) {
   const schedule = WEEK_SCHEDULES[getSchedKey(currentWeek)];
   const [expanded, setExpanded] = useState(null);
   const [completed, setCompleted] = useState({});
+  const [editSession, setEditSession] = useState(null); // {week, day} or null
   const realWeek = getCurrentTrainingWeek();
   const isFuture = currentWeek > realWeek;
   const isPast   = currentWeek < realWeek;
@@ -958,12 +962,20 @@ function WeekView({ currentWeek, setCurrentWeek }) {
     setExpanded(null);
   }, [currentWeek]);
 
+  const deleteLog = (s) => {
+    if(!window.confirm(`Delete the log for ${s.day} — ${s.title}? This can't be undone.`)) return;
+    localStorage.removeItem(sessionKey(currentWeek, s.id));
+    setCompleted(p=>({...p, [s.id]:false}));
+  };
+
   const nonRest = schedule.filter(s=>s.type!=="rest");
   // Only count dots for current/past weeks — future weeks show empty dots
   const doneCount = isFuture ? 0 : nonRest.filter(s=>completed[s.id]).length;
 
   return (
     <div style={{paddingBottom:90}}>
+      {editSession && <RetroactiveLog currentWeek={editSession.week} presetDay={editSession.day} onClose={()=>{ setEditSession(null); const map={}; schedule.forEach(s=>{const d=LS.get(sessionKey(currentWeek,s.id)); map[s.id]=d?.done||false;}); setCompleted(map); }}/>}
+
       <div style={{background:`linear-gradient(135deg,#0f172a,${phase.dim})`,padding:"20px 16px 14px",borderBottom:"1px solid #1e293b"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
           <div>
@@ -1037,9 +1049,22 @@ function WeekView({ currentWeek, setCurrentWeek }) {
                       {s.cardio.note && <div style={{fontSize:11,color:"#64748b",marginTop:3}}>{s.cardio.note}</div>}
                     </div>
                   )}
-                  <div style={{marginTop:10,fontSize:12,color:isFuture?"#334155":"#475569",textAlign:"center"}}>
-                    {isFuture ? "🔒 Log opens when this week arrives" : "Log this session in the Today tab"}
-                  </div>
+                  {!isFuture && isDone ? (
+                    <div style={{marginTop:10,display:"flex",gap:8}} onClick={e=>e.stopPropagation()}>
+                      <button onClick={()=>setEditSession({week:currentWeek, day:s.day})}
+                        style={{flex:1,background:"rgba(124,58,237,0.15)",border:"1px solid #6d28d9",borderRadius:8,padding:"8px",color:"#c084fc",fontSize:12,fontWeight:600,cursor:"pointer"}}>
+                        ✏️ Edit log
+                      </button>
+                      <button onClick={()=>deleteLog(s)}
+                        style={{flex:1,background:"rgba(239,68,68,0.1)",border:"1px solid #7f1d1d",borderRadius:8,padding:"8px",color:"#fca5a5",fontSize:12,fontWeight:600,cursor:"pointer"}}>
+                        🗑 Delete log
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{marginTop:10,fontSize:12,color:isFuture?"#334155":"#475569",textAlign:"center"}}>
+                      {isFuture ? "🔒 Log opens when this week arrives" : "Log this session in the Today tab"}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -1093,6 +1118,7 @@ function ProgressView({ currentWeek, StreakBadge: SB, StrengthGraphs: SG, Recove
         {SB && <SB currentWeek={currentWeek}/>}
         <MilestoneCountdown currentWeek={currentWeek}/>
         <TrainingLoad currentWeek={currentWeek}/>
+        <BodyweightStrengthChart/>
         {RT && <RT currentWeek={currentWeek}/>}
         {SG && <SG/>}
         {/* Weight */}
@@ -2130,10 +2156,10 @@ function StretchingView({ embedded }) {
 
 // ─── RETROACTIVE LOG ──────────────────────────────────────────────────────────
 
-function RetroactiveLog({ currentWeek, onClose }) {
+function RetroactiveLog({ currentWeek, onClose, presetDay }) {
   const realWeek = getCurrentTrainingWeek();
   const [selectedWeek, setSelectedWeek] = useState(currentWeek);
-  const [selectedDay, setSelectedDay]   = useState(null);
+  const [selectedDay, setSelectedDay]   = useState(presetDay||null);
   const [cardioVal, setCardioVal]       = useState("");
   const [setLogs, setSetLogs]           = useState({});
   const [notes, setNotes]               = useState("");
@@ -2170,8 +2196,8 @@ function RetroactiveLog({ currentWeek, onClose }) {
         <div style={{background:"linear-gradient(135deg,#0f172a,#1a1a2e)",padding:"20px 16px 14px",borderBottom:"1px solid #1e293b",display:"flex",alignItems:"center",gap:12}}>
           <button onClick={onClose} style={{background:"#1e293b",border:"none",color:"#94a3b8",borderRadius:8,width:34,height:34,cursor:"pointer",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✕</button>
           <div>
-            <div style={{fontSize:11,color:"#f59e0b",letterSpacing:2,textTransform:"uppercase",marginBottom:2}}>Retroactive Log</div>
-            <div style={{fontSize:18,fontWeight:800}}>Log a Missed Workout</div>
+            <div style={{fontSize:11,color:"#f59e0b",letterSpacing:2,textTransform:"uppercase",marginBottom:2}}>{presetDay?"Edit Log":"Retroactive Log"}</div>
+            <div style={{fontSize:18,fontWeight:800}}>{presetDay?"Edit Workout Log":"Log a Missed Workout"}</div>
           </div>
         </div>
 
@@ -2932,7 +2958,7 @@ function MilestoneCountdown({ currentWeek }) {
 
 // ─── TOOLS VIEW (new tab combining all the tools) ────────────────────────────
 
-function ToolsView({ currentWeek }) {
+function ToolsView({ currentWeek, theme, setTheme }) {
   const [subTab, setSubTab] = useState("zone2");
 
   return (
@@ -2952,6 +2978,7 @@ function ToolsView({ currentWeek }) {
           ["brick",   "⚡ Brick"],
           ["stretch", "🧘 Stretch"],
           ["backup",  "💾 Backup"],
+          ["settings","⚙️ Settings"],
         ].map(([id,label])=>(
           <button key={id} onClick={()=>setSubTab(id)}
             style={{flexShrink:0,background:"none",border:"none",borderBottom:subTab===id?"2px solid #7c3aed":"2px solid transparent",color:subTab===id?"#e2e8f0":"#64748b",padding:"12px 16px",fontSize:12,cursor:"pointer",fontWeight:subTab===id?700:400,whiteSpace:"nowrap"}}>
@@ -2967,6 +2994,18 @@ function ToolsView({ currentWeek }) {
         {subTab==="brick"   && <RaceSimTracker/>}
         {subTab==="stretch" && <StretchingView embedded/>}
         {subTab==="backup"  && <BackupView/>}
+        {subTab==="settings"&& (
+          <div>
+            <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid #1e293b",borderRadius:14,padding:16}}>
+              <div style={{fontWeight:700,fontSize:15,marginBottom:4}}>🎨 Appearance</div>
+              <div style={{fontSize:12,color:"#64748b",marginBottom:14}}>Choose your preferred theme</div>
+              <ThemeToggle theme={theme} setTheme={setTheme}/>
+            </div>
+            <div style={{background:"rgba(37,99,235,0.08)",border:"1px solid #1e3a5f",borderRadius:10,padding:"10px 14px",fontSize:12,color:"#93c5fd",lineHeight:1.6,marginTop:14}}>
+              💡 Notification settings have moved — they're available right after enabling notifications the first time you log a session, or via your phone's notification permissions for this app.
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -3051,6 +3090,8 @@ function BackupView() {
 
   return (
     <div>
+      <PDFExportView/>
+
       <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid #1e293b",borderRadius:14,padding:16,marginBottom:14}}>
         <div style={{fontWeight:700,fontSize:15,marginBottom:4}}>💾 Backup Your Data</div>
         <div style={{fontSize:12,color:"#64748b",marginBottom:14}}>
@@ -3108,6 +3149,309 @@ function BackupView() {
       <div style={{marginTop:14,background:"rgba(37,99,235,0.08)",border:"1px solid #1e3a5f",borderRadius:10,padding:"10px 14px",fontSize:12,color:"#93c5fd",lineHeight:1.6}}>
         💡 <strong>Moving to a new URL?</strong> Export here on the OLD url first, then open the NEW url, come to this same screen, and restore the file. Takes 30 seconds and keeps everything.
       </div>
+    </div>
+  );
+}
+
+// ─── DASHBOARD STRIP ──────────────────────────────────────────────────────────
+
+function DashboardStrip({ currentWeek }) {
+  const realWeek = getCurrentTrainingWeek();
+  const sched = WEEK_SCHEDULES[getSchedKey(realWeek)];
+  const nonRest = sched.filter(s=>s.type!=="rest");
+  const doneCount = nonRest.filter(s=>LS.get(sessionKey(realWeek,s.id))?.done).length;
+
+  // Find next long/key session this week (Saturday usually)
+  const dayNames = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  const todayIdx = new Date().getDay();
+  const upcoming = sched.find((s,idx) => {
+    const sIdx = dayNames.indexOf(s.day);
+    return sIdx > todayIdx && s.type!=="rest" && !LS.get(sessionKey(realWeek,s.id))?.done;
+  });
+
+  const nextMilestone = MILESTONES.find(m => m.week > realWeek);
+  const weeksToMilestone = nextMilestone ? nextMilestone.week - realWeek : 0;
+
+  const raceDays = Math.max(0, Math.floor((RACE_DATE - new Date()) / (1000*60*60*24)));
+
+  return (
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
+      <div style={{background:"rgba(124,58,237,0.1)",border:"1px solid #4c1d95",borderRadius:10,padding:"10px 12px"}}>
+        <div style={{fontSize:9,color:"#8b5cf6",letterSpacing:1,textTransform:"uppercase",marginBottom:3}}>This week</div>
+        <div style={{fontSize:18,fontWeight:800,color:"#c084fc"}}>{doneCount}<span style={{fontSize:11,color:"#6d28d9",fontWeight:400}}>/{nonRest.length}</span></div>
+      </div>
+      <div style={{background:"rgba(16,185,129,0.1)",border:"1px solid #065f46",borderRadius:10,padding:"10px 12px"}}>
+        <div style={{fontSize:9,color:"#10b981",letterSpacing:1,textTransform:"uppercase",marginBottom:3}}>Race day</div>
+        <div style={{fontSize:18,fontWeight:800,color:"#86efac"}}>{raceDays}<span style={{fontSize:11,color:"#065f46",fontWeight:400}}> days</span></div>
+      </div>
+      {upcoming && (
+        <div style={{gridColumn:"1 / -1",background:"rgba(255,255,255,0.03)",border:"1px solid #1e293b",borderRadius:10,padding:"10px 12px",display:"flex",alignItems:"center",gap:10}}>
+          <span style={{fontSize:18}}>{upcoming.icon}</span>
+          <div style={{flex:1}}>
+            <div style={{fontSize:9,color:"#64748b",letterSpacing:1,textTransform:"uppercase"}}>Next up — {upcoming.day}</div>
+            <div style={{fontSize:12,color:"#cbd5e1",marginTop:1}}>{upcoming.title}</div>
+          </div>
+        </div>
+      )}
+      {nextMilestone && (
+        <div style={{gridColumn:"1 / -1",background:"rgba(245,158,11,0.06)",border:"1px solid #78350f",borderRadius:10,padding:"8px 12px",fontSize:11,color:"#d97706",textAlign:"center"}}>
+          🎯 {weeksToMilestone}wk{weeksToMilestone!==1?"s":""} to: {nextMilestone.label}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── BODYWEIGHT + STRENGTH CORRELATION ───────────────────────────────────────
+
+function BodyweightStrengthChart() {
+  const bwHistory = LS.get("im_bw_history") || [];
+  const [activeLift, setActiveLift] = useState(TRACKED_LIFTS[0]);
+
+  // Collect strength logs for active lift
+  const liftLogs = [];
+  for(let w=1; w<=63; w++) {
+    const sched = WEEK_SCHEDULES[getSchedKey(w)];
+    sched.forEach(s => {
+      const data = LS.get(sessionKey(w, s.id));
+      if(!data || !data.setLogs) return;
+      s.sets.forEach((set,i) => {
+        if(set.label!==activeLift) return;
+        const kg = parseFloat(data.setLogs[`${i}_kg`]);
+        if(kg > 0) liftLogs.push({ week:w, kg });
+      });
+    });
+  }
+  const liftByWeek = liftLogs.reduce((acc,l) => {
+    const existing = acc.find(x=>x.week===l.week);
+    if(existing) { if(l.kg>existing.kg) existing.kg=l.kg; }
+    else acc.push({week:l.week,kg:l.kg});
+    return acc;
+  },[]).sort((a,b)=>a.week-b.week);
+
+  if(bwHistory.length<2 && liftByWeek.length<2) {
+    return (
+      <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid #1e293b",borderRadius:14,padding:16,marginBottom:14}}>
+        <div style={{fontWeight:700,fontSize:15,marginBottom:6}}>⚖️📈 Weight vs Strength</div>
+        <div style={{fontSize:12,color:"#475569",textAlign:"center",padding:"12px 0"}}>Log a few bodyweight entries and strength sessions to see this chart.</div>
+      </div>
+    );
+  }
+
+  const allWeeks = [...new Set([...bwHistory.map(b=>b.week), ...liftByWeek.map(l=>l.week)])].sort((a,b)=>a-b);
+  const minBw = bwHistory.length ? Math.min(...bwHistory.map(b=>b.kg)) : 0;
+  const maxBw = bwHistory.length ? Math.max(...bwHistory.map(b=>b.kg)) : 1;
+  const minLift = liftByWeek.length ? Math.min(...liftByWeek.map(l=>l.kg)) : 0;
+  const maxLift = liftByWeek.length ? Math.max(...liftByWeek.map(l=>l.kg)) : 1;
+
+  return (
+    <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid #1e293b",borderRadius:14,padding:16,marginBottom:14}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+        <div style={{fontWeight:700,fontSize:15}}>⚖️📈 Weight vs Strength</div>
+      </div>
+      <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14}}>
+        {TRACKED_LIFTS.map(l=>(
+          <button key={l} onClick={()=>setActiveLift(l)}
+            style={{background:activeLift===l?"#1d4ed8":"rgba(255,255,255,0.04)",border:`1px solid ${activeLift===l?"#2563eb":"#1e293b"}`,borderRadius:20,padding:"4px 10px",color:activeLift===l?"#93c5fd":"#64748b",fontSize:10,cursor:"pointer",fontWeight:activeLift===l?700:400}}>
+            {l}
+          </button>
+        ))}
+      </div>
+
+      <div style={{display:"flex",gap:14,marginBottom:10}}>
+        <div style={{display:"flex",alignItems:"center",gap:5}}>
+          <div style={{width:10,height:10,borderRadius:3,background:"#8b5cf6"}}/>
+          <span style={{fontSize:11,color:"#a78bfa"}}>Bodyweight</span>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:5}}>
+          <div style={{width:10,height:10,borderRadius:3,background:"#22c55e"}}/>
+          <span style={{fontSize:11,color:"#86efac"}}>{activeLift}</span>
+        </div>
+      </div>
+
+      {/* Dual bar comparison */}
+      <div style={{display:"flex",gap:6,alignItems:"flex-end",height:80,marginBottom:6}}>
+        {allWeeks.slice(-10).map((w,i) => {
+          const bw = bwHistory.find(b=>b.week===w);
+          const lift = liftByWeek.find(l=>l.week===w);
+          const bwH = bw && maxBw>minBw ? Math.round(((bw.kg-minBw)/(maxBw-minBw))*50)+10 : bw ? 30 : 0;
+          const liftH = lift && maxLift>minLift ? Math.round(((lift.kg-minLift)/(maxLift-minLift))*50)+10 : lift ? 30 : 0;
+          return (
+            <div key={i} style={{flex:1,display:"flex",gap:2,alignItems:"flex-end",height:"100%"}}>
+              {bw && <div style={{flex:1,background:"#8b5cf6",borderRadius:"2px 2px 0 0",height:bwH,opacity:0.85}}/>}
+              {lift && <div style={{flex:1,background:"#22c55e",borderRadius:"2px 2px 0 0",height:liftH,opacity:0.85}}/>}
+            </div>
+          );
+        })}
+      </div>
+      <div style={{display:"flex",gap:6}}>
+        {allWeeks.slice(-10).map((w,i)=>(
+          <div key={i} style={{flex:1,textAlign:"center",fontSize:8,color:"#334155"}}>W{w}</div>
+        ))}
+      </div>
+      <div style={{fontSize:11,color:"#334155",textAlign:"center",marginTop:10}}>
+        {bwHistory.length>=2 && `${bwHistory[0].kg}kg → ${bwHistory[bwHistory.length-1].kg}kg bodyweight`}
+        {bwHistory.length>=2 && liftByWeek.length>=2 && " · "}
+        {liftByWeek.length>=2 && `${liftByWeek[0].kg}kg → ${liftByWeek[liftByWeek.length-1].kg}kg ${activeLift}`}
+      </div>
+    </div>
+  );
+}
+
+// ─── THEME TOGGLE ─────────────────────────────────────────────────────────────
+
+function useTheme() {
+  const [theme, setThemeState] = useState(()=>LS.get("im_theme")||"dark");
+  const setTheme = (t) => { setThemeState(t); LS.set("im_theme", t); };
+  return [theme, setTheme];
+}
+
+const THEMES = {
+  dark:  { bg:"#0a0a0f", panel:"rgba(255,255,255,0.03)", border:"#1e293b", text:"#e2e8f0", sub:"#64748b" },
+  light: { bg:"#f8fafc", panel:"rgba(0,0,0,0.025)",       border:"#e2e8f0", text:"#0f172a", sub:"#64748b" },
+};
+
+function ThemeToggle({ theme, setTheme }) {
+  return (
+    <div style={{display:"flex",gap:8,marginBottom:14}}>
+      {[["dark","🌙 Dark"],["light","☀️ Light"]].map(([id,label])=>(
+        <button key={id} onClick={()=>setTheme(id)}
+          style={{flex:1,background:theme===id?"#7c3aed":"rgba(255,255,255,0.04)",border:`1px solid ${theme===id?"#7c3aed":"#1e293b"}`,borderRadius:10,padding:"10px",color:theme===id?"#fff":"#94a3b8",fontWeight:theme===id?700:400,fontSize:13,cursor:"pointer"}}>
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ─── WEEKLY SUMMARY NOTIFICATION ──────────────────────────────────────────────
+
+function useWeeklySummaryNotification(currentWeek) {
+  useEffect(()=>{
+    if(typeof Notification === "undefined" || Notification.permission !== "granted") return;
+    const now = new Date();
+    // Only fire on Sunday evening (day 0), after 18:00
+    if(now.getDay() !== 0 || now.getHours() < 18) return;
+
+    const weekKey = `im_weekly_summary_fired_${now.toISOString().split("T")[0]}`;
+    if(LS.get(weekKey)) return;
+
+    const realWeek = getCurrentTrainingWeek();
+    const sched = WEEK_SCHEDULES[getSchedKey(realWeek)];
+    const nonRest = sched.filter(s=>s.type!=="rest");
+    const done = nonRest.filter(s=>LS.get(sessionKey(realWeek,s.id))?.done).length;
+
+    const bwHistory = LS.get("im_bw_history")||[];
+    const thisWeekBw = bwHistory.filter(b=>b.week===realWeek);
+    const bwNote = thisWeekBw.length ? ` · ${thisWeekBw[thisWeekBw.length-1].kg}kg` : "";
+
+    new Notification("📊 Weekly Recap", {
+      body: `Week ${realWeek}: ${done}/${nonRest.length} sessions done${bwNote}. Next week starts tomorrow — rest well tonight.`,
+      icon: "/icon-192.png",
+    });
+    LS.set(weekKey, true);
+  }, [currentWeek]);
+}
+
+// ─── PDF EXPORT ───────────────────────────────────────────────────────────────
+
+function PDFExportView() {
+  const [generating, setGenerating] = useState(false);
+  const [rangeStart, setRangeStart] = useState(1);
+  const [rangeEnd, setRangeEnd]     = useState(getCurrentTrainingWeek());
+
+  const generatePDF = () => {
+    setGenerating(true);
+    setTimeout(() => {
+      let html = `
+        <html><head><meta charset="utf-8"><title>Ironman Training Log</title>
+        <style>
+          body{font-family:Arial,sans-serif;padding:30px;color:#111;}
+          h1{font-size:22px;margin-bottom:4px;}
+          h2{font-size:15px;margin:24px 0 8px;border-bottom:2px solid #7c3aed;padding-bottom:4px;}
+          .week{margin-bottom:18px;page-break-inside:avoid;}
+          .session{padding:8px 0;border-bottom:1px solid #eee;}
+          .session-title{font-weight:bold;font-size:13px;}
+          .session-meta{font-size:11px;color:#666;}
+          .done{color:#16a34a;font-weight:bold;}
+          .notdone{color:#999;}
+          table{width:100%;border-collapse:collapse;margin-top:4px;}
+          td{padding:3px 6px;font-size:11px;border-bottom:1px solid #f0f0f0;}
+          .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;border-bottom:3px solid #7c3aed;padding-bottom:12px;}
+        </style></head><body>
+        <div class="header">
+          <div><h1>Ironman Emilia-Romagna — Training Log</h1><div style="color:#666;font-size:12px;">Weeks ${rangeStart}–${rangeEnd} · Generated ${new Date().toLocaleDateString()}</div></div>
+        </div>
+      `;
+
+      for(let w=rangeStart; w<=rangeEnd; w++) {
+        const sched = WEEK_SCHEDULES[getSchedKey(w)];
+        const phase = getPhase(w);
+        html += `<div class="week"><h2>Week ${w} — ${phase.name}</h2>`;
+        sched.forEach(s => {
+          const data = LS.get(sessionKey(w, s.id));
+          const isDone = data?.done;
+          html += `<div class="session">
+            <div class="session-title">${s.icon} ${s.day} — ${s.title} <span class="${isDone?'done':'notdone'}">${isDone?'✓ Completed':'Not logged'}</span></div>`;
+          if(isDone && data.setLogs && s.sets.length) {
+            html += `<table>`;
+            s.sets.forEach((set,i) => {
+              const kg = data.setLogs[`${i}_kg`];
+              if(kg) html += `<tr><td>${set.label}</td><td>${set.reps}</td><td>${kg}kg</td></tr>`;
+            });
+            html += `</table>`;
+          }
+          if(isDone && data.cardioVal) {
+            html += `<div class="session-meta">${s.cardio?.label||'Cardio'}: ${data.cardioVal}${s.cardio?.unit||''}</div>`;
+          }
+          if(isDone && data.rpe) html += `<div class="session-meta">RPE: ${data.rpe}/10</div>`;
+          if(isDone && data.notes) html += `<div class="session-meta">Notes: ${data.notes}</div>`;
+          html += `</div>`;
+        });
+        html += `</div>`;
+      }
+
+      html += `</body></html>`;
+
+      const blob = new Blob([html], { type:"text/html" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `ironman-log-weeks-${rangeStart}-${rangeEnd}.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setGenerating(false);
+    }, 400);
+  };
+
+  return (
+    <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid #1e293b",borderRadius:14,padding:16,marginBottom:14}}>
+      <div style={{fontWeight:700,fontSize:15,marginBottom:4}}>📄 Export Training Log</div>
+      <div style={{fontSize:12,color:"#64748b",marginBottom:14}}>Generates a printable HTML report — open it and print to PDF, or share directly</div>
+
+      <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:14}}>
+        <div style={{flex:1}}>
+          <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>From week</div>
+          <input type="number" min="1" max="63" value={rangeStart} onChange={e=>setRangeStart(Math.max(1,Math.min(63,parseInt(e.target.value)||1)))}
+            style={{width:"100%",boxSizing:"border-box",background:"rgba(255,255,255,0.06)",border:"1px solid #334155",borderRadius:8,padding:"8px",color:"#e2e8f0",fontSize:15,fontWeight:700,textAlign:"center"}}
+          />
+        </div>
+        <span style={{color:"#475569",marginTop:14}}>→</span>
+        <div style={{flex:1}}>
+          <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>To week</div>
+          <input type="number" min="1" max="63" value={rangeEnd} onChange={e=>setRangeEnd(Math.max(1,Math.min(63,parseInt(e.target.value)||1)))}
+            style={{width:"100%",boxSizing:"border-box",background:"rgba(255,255,255,0.06)",border:"1px solid #334155",borderRadius:8,padding:"8px",color:"#e2e8f0",fontSize:15,fontWeight:700,textAlign:"center"}}
+          />
+        </div>
+      </div>
+
+      <button onClick={generatePDF} disabled={generating}
+        style={{width:"100%",background:generating?"#1e293b":"linear-gradient(135deg,#7c3aed,#4f46e5)",border:"none",borderRadius:10,padding:"13px",color:generating?"#64748b":"#fff",fontWeight:700,fontSize:14,cursor:generating?"default":"pointer"}}>
+        {generating ? "Generating..." : "📥 Download Report"}
+      </button>
+      <div style={{fontSize:11,color:"#334155",marginTop:8,textAlign:"center"}}>Open the downloaded file in any browser, then use Print → Save as PDF</div>
     </div>
   );
 }
@@ -3171,9 +3515,11 @@ export default function App() {
   const [prShow, setPrShow]           = useState(false);
   const [prExercise, setPrExercise]   = useState("");
   const [prKg, setPrKg]               = useState(0);
+  const [theme, setTheme]             = useTheme();
 
   useEffect(()=>{ LS.set("im_current_week", currentWeek); },[currentWeek]);
   useNotificationChecker(currentWeek);
+  useWeeklySummaryNotification(currentWeek);
 
   // Reset to actual current week when switching to Today tab
   const handleTabChange = (newTab) => {
@@ -3188,14 +3534,16 @@ export default function App() {
     return ()=>window.removeEventListener("ironman_pr", handler);
   },[]);
 
+  const t = THEMES[theme] || THEMES.dark;
+
   return (
-    <div style={{background:"#0a0a0f",minHeight:"100dvh",color:"#e2e8f0",fontFamily:"'Inter',system-ui,sans-serif",maxWidth:480,margin:"0 auto",position:"relative"}}>
+    <div style={{background:t.bg,minHeight:"100dvh",color:t.text,fontFamily:"'Inter',system-ui,sans-serif",maxWidth:480,margin:"0 auto",position:"relative",transition:"background 0.2s, color 0.2s"}}>
       <PRBell show={prShow} exercise={prExercise} kg={prKg} onClose={()=>setPrShow(false)}/>
       {tab==="today"    && <TodayView    currentWeek={currentWeek} setCurrentWeek={setCurrentWeek} onPR={(ex,kg)=>{setPrExercise(ex);setPrKg(kg);setPrShow(true);}}/>}
       {tab==="week"     && <WeekView     currentWeek={currentWeek} setCurrentWeek={setCurrentWeek}/>}
       {tab==="progress" && <ProgressView currentWeek={currentWeek} StreakBadge={StreakBadge} StrengthGraphs={StrengthGraphs} RecoveryTracker={RecoveryTracker} RaceCountdown={RaceCountdown}/>}
       {tab==="stretch"  && <StretchingView/>}
-      {tab==="tools"    && <ToolsView currentWeek={currentWeek}/>}
+      {tab==="tools"    && <ToolsView currentWeek={currentWeek} theme={theme} setTheme={setTheme}/>}
       {tab==="race"     && <RaceView currentWeek={currentWeek}/>}
       {tab==="notif"    && <NotificationsView/>}
       <BottomNav tab={tab} setTab={handleTabChange}/>
