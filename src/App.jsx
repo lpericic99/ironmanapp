@@ -3456,15 +3456,390 @@ function PDFExportView() {
   );
 }
 
+// ─── GARMIN FIT FILE IMPORTER ────────────────────────────────────────────────
+// Parses .FIT files exported from Garmin Connect app
+// No API, no subscription, no servers needed — 100% free
+
+// FIT file parser — extracts key fields from binary FIT format
+// FIT files use a binary protocol; we extract the most useful fields
+function parseFIT(buffer) {
+  try {
+    const bytes = new Uint8Array(buffer);
+    const view  = new DataView(buffer);
+
+    // Verify FIT header signature
+    const header = String.fromCharCode(bytes[8], bytes[9], bytes[10]);
+    if(header !== "FIT") throw new Error("Not a valid FIT file");
+
+    // Walk through FIT messages extracting session and record data
+    let offset = view.getUint8(0); // header size
+    const dataSize = view.getUint32(4, true);
+    const end = offset + dataSize;
+
+    // Definition messages by local message number
+    const definitions = {};
+    const records = [];
+    let sessionData = {};
+
+    // FIT message type IDs we care about
+    const MESG_SESSION = 18;
+    const MESG_RECORD  = 20;
+    const MESG_ACTIVITY= 34;
+    const MESG_LAP     = 19;
+
+    // Field IDs within messages
+    const FIELD_MAP = {
+      [MESG_SESSION]: {
+        2: "start_time",
+        7: "total_elapsed_time",  // seconds * 1000
+        8: "total_timer_time",    // seconds * 1000
+        9: "total_distance",      // meters * 100
+        11:"total_calories",
+        14:"avg_heart_rate",
+        15:"max_heart_rate",
+        16:"avg_cadence",
+        18:"sport",
+        24:"avg_speed",           // m/s * 1000
+        25:"max_speed",
+        26:"total_ascent",
+        28:"sub_sport",
+        33:"training_stress_score",
+      },
+      [MESG_RECORD]: {
+        0:"position_lat",
+        1:"position_long",
+        3:"heart_rate",
+        4:"cadence",
+        5:"distance",
+        6:"speed",
+        7:"power",
+        8:"altitude",
+        253:"timestamp",
+      }
+    };
+
+    const SPORT_NAMES = {
+      0:"generic",1:"running",2:"cycling",5:"swimming",
+      10:"hiking",11:"walking",15:"fitness_equipment",
+      17:"rowing",26:"stand_up_paddleboarding",
+    };
+
+    while(offset < end - 1) {
+      const recordHeader = bytes[offset];
+      offset++;
+
+      if(recordHeader & 0x40) {
+        // Definition message
+        const localMsgNum = recordHeader & 0x0F;
+        offset++; // reserved
+        const isBigEndian  = bytes[offset++] === 1;
+        const globalMsgNum = isBigEndian
+          ? (bytes[offset++] << 8) | bytes[offset++]
+          : bytes[offset++] | (bytes[offset++] << 8);
+        const numFields    = bytes[offset++];
+        const fields = [];
+        for(let i=0; i<numFields; i++) {
+          fields.push({ num: bytes[offset++], size: bytes[offset++], type: bytes[offset++] });
+        }
+        definitions[localMsgNum] = { globalMsgNum, isBigEndian, fields };
+      } else {
+        // Data message
+        const localMsgNum = recordHeader & 0x0F;
+        const def = definitions[localMsgNum];
+        if(!def) { offset++; continue; }
+
+        const msgStart = offset;
+        const fieldMap = FIELD_MAP[def.globalMsgNum] || {};
+        const record = { _type: def.globalMsgNum };
+
+        for(const field of def.fields) {
+          if(offset + field.size > end) { offset += field.size; continue; }
+          let val;
+          if(field.size === 1)      val = bytes[offset];
+          else if(field.size === 2) val = def.isBigEndian ? view.getUint16(offset) : view.getUint16(offset, true);
+          else if(field.size === 4) val = def.isBigEndian ? view.getUint32(offset) : view.getUint32(offset, true);
+          else                      val = null;
+
+          const name = fieldMap[field.num];
+          if(name && val !== undefined && val !== null && val < 0xFFFFFF) {
+            record[name] = val;
+          }
+          offset += field.size;
+        }
+
+        if(def.globalMsgNum === MESG_SESSION) {
+          sessionData = { ...sessionData, ...record };
+        } else if(def.globalMsgNum === MESG_RECORD) {
+          if(record.heart_rate && record.heart_rate < 250) {
+            records.push({ hr: record.heart_rate, power: record.power, speed: record.speed });
+          }
+        }
+      }
+    }
+
+    // Process session data into human-readable values
+    const sport      = SPORT_NAMES[sessionData.sport] || "generic";
+    const durationSec= (sessionData.total_timer_time || sessionData.total_elapsed_time || 0) / 1000;
+    const durationMin= Math.round(durationSec / 60);
+    const distanceM  = (sessionData.total_distance || 0) / 100;
+    const distanceKm = (distanceM / 1000).toFixed(2);
+    const avgSpeedMs = (sessionData.avg_speed || 0) / 1000;
+    const avgHR      = sessionData.avg_heart_rate || (records.length ? Math.round(records.reduce((s,r)=>s+r.hr,0)/records.length) : null);
+    const maxHR      = sessionData.max_heart_rate || (records.length ? Math.max(...records.map(r=>r.hr)) : null);
+    const calories   = sessionData.total_calories || null;
+    const ascent     = sessionData.total_ascent || null;
+    const avgWatts   = sessionData.avg_power || (records.filter(r=>r.power).length ? Math.round(records.filter(r=>r.power).reduce((s,r)=>s+r.power,0)/records.filter(r=>r.power).length) : null);
+
+    // Pace/speed formatting
+    let paceStr = null;
+    if(avgSpeedMs > 0 && (sport==="running")) {
+      const secPerKm = 1000 / avgSpeedMs;
+      const m = Math.floor(secPerKm/60), s = Math.round(secPerKm%60);
+      paceStr = `${m}:${String(s).padStart(2,"0")}/km`;
+    }
+    const speedKmh = avgSpeedMs > 0 ? (avgSpeedMs * 3.6).toFixed(1) : null;
+
+    // Map sport to our app types
+    const typeMap = { running:"run", cycling:"bike", swimming:"swim", rowing:"strength", fitness_equipment:"strength", generic:"strength" };
+    const appType = typeMap[sport] || "run";
+
+    // Timestamp (FIT epoch starts 1989-12-31)
+    const FIT_EPOCH = 631065600;
+    const startTimestamp = sessionData.start_time ? (sessionData.start_time + FIT_EPOCH) * 1000 : Date.now();
+    const startDate = new Date(startTimestamp);
+    const dayNames = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+
+    return {
+      sport,
+      appType,
+      day:       dayNames[startDate.getDay()],
+      date:      startDate.toLocaleDateString("en",{weekday:"short",day:"numeric",month:"short"}),
+      startDate,
+      durationMin,
+      distanceKm: parseFloat(distanceKm),
+      distanceM:  Math.round(distanceM),
+      avgHR:      avgHR && avgHR < 250 ? avgHR : null,
+      maxHR:      maxHR && maxHR < 250 ? maxHR : null,
+      calories,
+      ascent,
+      avgWatts,
+      paceStr,
+      speedKmh,
+      records: records.length,
+    };
+  } catch(e) {
+    throw new Error(`FIT parse error: ${e.message}`);
+  }
+}
+
+function GarminImportView() {
+  const [parsedActivity, setParsedActivity] = useState(null);
+  const [error,          setError]          = useState(null);
+  const [importing,      setImporting]      = useState(false);
+  const [imported,       setImported]       = useState(false);
+  const [history,        setHistory]        = useState(()=>LS.get("im_fit_imports")||[]);
+
+  const TYPE_ICONS  = { run:"🏃", bike:"🚴", swim:"🏊", strength:"🏋️" };
+  const TYPE_COLORS = { run:"#ea580c", bike:"#16a34a", swim:"#0891b2", strength:"#2563eb" };
+
+  const handleFile = async (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    setError(null); setParsedActivity(null); setImported(false);
+
+    if(!file.name.toLowerCase().endsWith(".fit")) {
+      setError("Please select a .FIT file. These are exported from Garmin Connect app.");
+      return;
+    }
+
+    try {
+      const buffer = await file.arrayBuffer();
+      const result = parseFIT(buffer);
+      setParsedActivity({ ...result, fileName: file.name });
+    } catch(err) {
+      setError(`Couldn't read this FIT file: ${err.message}. Make sure it's a valid Garmin .FIT file.`);
+    }
+    // Reset file input
+    e.target.value = "";
+  };
+
+  const importToLog = () => {
+    if(!parsedActivity) return;
+    setImporting(true);
+
+    const realWeek = getCurrentTrainingWeek();
+    const a = parsedActivity;
+
+    // Find matching session this week by type and day
+    const sched = WEEK_SCHEDULES[getSchedKey(realWeek)];
+    const matchSession = sched.find(s => s.day === a.day && s.type === a.appType)
+      || sched.find(s => s.type === a.appType && !LS.get(sessionKey(realWeek, s.id))?.done);
+
+    if(matchSession) {
+      const skey = sessionKey(realWeek, matchSession.id);
+      const existing = LS.get(skey) || {};
+      const cardioVal = a.appType === "swim" ? String(a.durationMin)
+                      : a.appType === "bike" ? String(a.distanceKm)
+                      : a.appType === "run"  ? String(a.durationMin)
+                      : String(a.durationMin);
+
+      const notesParts = [`Imported from Garmin FIT: ${a.fileName}`];
+      if(a.avgHR)    notesParts.push(`Avg HR ${a.avgHR}bpm`);
+      if(a.maxHR)    notesParts.push(`Max HR ${a.maxHR}bpm`);
+      if(a.paceStr)  notesParts.push(a.paceStr);
+      if(a.speedKmh) notesParts.push(`${a.speedKmh}km/h avg`);
+      if(a.avgWatts) notesParts.push(`${a.avgWatts}w avg`);
+      if(a.ascent)   notesParts.push(`${a.ascent}m ascent`);
+
+      LS.set(skey, {
+        ...existing,
+        cardioVal,
+        done: true,
+        avgHR:    a.avgHR,
+        maxHR:    a.maxHR,
+        avgWatts: a.avgWatts,
+        calories: a.calories,
+        notes: existing.notes || notesParts.join(" · "),
+        fitFile:  a.fileName,
+        savedAt:  new Date().toISOString(),
+      });
+    }
+
+    // Save to import history regardless
+    const entry = { ...a, importedAt: new Date().toISOString(), week: realWeek, matchedSession: !!matchSession };
+    const updated = [entry, ...history].slice(0, 20);
+    setHistory(updated);
+    LS.set("im_fit_imports", updated);
+
+    setImporting(false);
+    setImported(true);
+    setTimeout(()=>{ setImported(false); setParsedActivity(null); }, 2500);
+  };
+
+  return (
+    <div style={{paddingBottom:90}}>
+      {/* Header */}
+      <div style={{background:"linear-gradient(135deg,#0f172a,#1e3a5f)",padding:"20px 16px 14px",borderBottom:"1px solid #1e293b"}}>
+        <div style={{fontSize:11,color:"#3b82f6",letterSpacing:2,textTransform:"uppercase",marginBottom:4}}>Garmin Import</div>
+        <div style={{fontSize:24,fontWeight:800}}>Import FIT File</div>
+        <div style={{fontSize:13,color:"#64748b",marginTop:2}}>Auto-fill your training log from Garmin watch data</div>
+      </div>
+
+      <div style={{padding:"14px 16px",display:"flex",flexDirection:"column",gap:12}}>
+
+        {/* How it works */}
+        <div style={{background:"rgba(37,99,235,0.08)",border:"1px solid #1e3a5f",borderRadius:14,padding:16}}>
+          <div style={{fontWeight:700,fontSize:14,marginBottom:10,color:"#93c5fd"}}>📋 How to export from Garmin Connect</div>
+          {[
+            { n:1, text:"Finish your workout — watch syncs to Garmin Connect app automatically" },
+            { n:2, text:"Open Garmin Connect app → tap the activity" },
+            { n:3, text:"Tap the ⋮ menu (top right) → Export → Export Original" },
+            { n:4, text:"Save the .FIT file to your phone" },
+            { n:5, text:"Come back here and tap Import below — done" },
+          ].map(s=>(
+            <div key={s.n} style={{display:"flex",gap:10,alignItems:"flex-start",marginBottom:8}}>
+              <div style={{width:20,height:20,borderRadius:"50%",background:"#1e3a5f",border:"1px solid #3b82f6",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:11,fontWeight:800,color:"#3b82f6"}}>{s.n}</div>
+              <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.5,marginTop:1}}>{s.text}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* File picker */}
+        <input type="file" accept=".fit,.FIT" id="fit-file-input" onChange={handleFile} style={{display:"none"}}/>
+        <button onClick={()=>document.getElementById("fit-file-input").click()}
+          style={{width:"100%",background:"linear-gradient(135deg,#1d4ed8,#1e40af)",border:"none",borderRadius:12,padding:"15px",color:"#fff",fontWeight:800,fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+          <span style={{fontSize:22}}>📂</span> Select .FIT File
+        </button>
+
+        {error && (
+          <div style={{background:"rgba(239,68,68,0.1)",border:"1px solid #7f1d1d",borderRadius:10,padding:"12px 14px",fontSize:13,color:"#fca5a5",lineHeight:1.5}}>{error}</div>
+        )}
+
+        {/* Parsed activity preview */}
+        {parsedActivity && (
+          <div style={{background:"rgba(37,99,235,0.1)",border:"1px solid #1d4ed8",borderRadius:14,padding:16}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+              <span style={{fontSize:28}}>{TYPE_ICONS[parsedActivity.appType]||"🏅"}</span>
+              <div>
+                <div style={{fontWeight:700,fontSize:15,color:"#93c5fd",textTransform:"capitalize"}}>{parsedActivity.sport}</div>
+                <div style={{fontSize:12,color:"#64748b",marginTop:1}}>{parsedActivity.date} · {parsedActivity.fileName}</div>
+              </div>
+            </div>
+
+            {/* Stats grid */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
+              {[
+                {label:"Duration",    val:`${parsedActivity.durationMin} min`,          show:true},
+                {label:"Distance",    val:parsedActivity.appType==="swim"?`${parsedActivity.distanceM}m`:`${parsedActivity.distanceKm}km`, show:parsedActivity.distanceKm>0},
+                {label:"Avg HR",      val:`${parsedActivity.avgHR} bpm`,               show:!!parsedActivity.avgHR},
+                {label:"Max HR",      val:`${parsedActivity.maxHR} bpm`,               show:!!parsedActivity.maxHR},
+                {label:"Avg Pace",    val:parsedActivity.paceStr,                      show:!!parsedActivity.paceStr},
+                {label:"Avg Speed",   val:`${parsedActivity.speedKmh} km/h`,           show:!!parsedActivity.speedKmh && !parsedActivity.paceStr},
+                {label:"Avg Power",   val:`${parsedActivity.avgWatts}w`,               show:!!parsedActivity.avgWatts},
+                {label:"Calories",    val:`${parsedActivity.calories} kcal`,           show:!!parsedActivity.calories},
+                {label:"Ascent",      val:`${parsedActivity.ascent}m`,                 show:!!parsedActivity.ascent},
+                {label:"Data points", val:`${parsedActivity.records} records`,         show:parsedActivity.records>0},
+              ].filter(s=>s.show).map((s,i)=>(
+                <div key={i} style={{background:"rgba(0,0,0,0.3)",borderRadius:9,padding:"8px 10px"}}>
+                  <div style={{fontSize:10,color:"#475569",marginBottom:2,textTransform:"uppercase",letterSpacing:1}}>{s.label}</div>
+                  <div style={{fontSize:15,fontWeight:700,color:"#e2e8f0"}}>{s.val}</div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{fontSize:12,color:"#64748b",marginBottom:10,textAlign:"center"}}>
+              {`Will log to: Week ${getCurrentTrainingWeek()} · ${parsedActivity.day} ${parsedActivity.appType} session`}
+            </div>
+
+            <button onClick={importToLog} disabled={importing||imported}
+              style={{width:"100%",background:imported?"#14532d":"linear-gradient(135deg,#16a34a,#15803d)",border:imported?"1px solid #22c55e":"none",borderRadius:10,padding:"14px",color:imported?"#86efac":"#fff",fontWeight:800,fontSize:15,cursor:"pointer"}}>
+              {importing?"Importing..." : imported?"✓ Logged to Training Plan!" : "Import to Training Log ✓"}
+            </button>
+          </div>
+        )}
+
+        {/* Import history */}
+        {history.length > 0 && (
+          <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid #1e293b",borderRadius:14,padding:16}}>
+            <div style={{fontWeight:700,fontSize:14,marginBottom:10}}>📜 Import History</div>
+            <div style={{display:"flex",flexDirection:"column",gap:6}}>
+              {history.slice(0,8).map((h,i)=>{
+                const color = TYPE_COLORS[h.appType]||"#7c3aed";
+                return (
+                  <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:i<Math.min(7,history.length-1)?"1px solid #1e293b":"none"}}>
+                    <span style={{fontSize:18,flexShrink:0}}>{TYPE_ICONS[h.appType]||"🏅"}</span>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:12,fontWeight:600,color:"#e2e8f0",textTransform:"capitalize"}}>{h.sport} · {h.durationMin}min</div>
+                      <div style={{fontSize:10,color:"#475569",marginTop:1}}>{h.date} · Week {h.week}</div>
+                    </div>
+                    <div style={{fontSize:10,color:h.matchedSession?"#86efac":"#64748b",fontWeight:600}}>
+                      {h.matchedSession?"✓ Logged":"Saved"}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Tips */}
+        <div style={{background:"rgba(124,58,237,0.08)",border:"1px solid #4c1d95",borderRadius:10,padding:"12px 14px",fontSize:12,color:"#a78bfa",lineHeight:1.6}}>
+          💡 <strong>Quick tip:</strong> On Android, after exporting from Garmin Connect you can share the .FIT file directly to Chrome or Files, then come back here and import it. The whole process takes about 30 seconds after each workout.
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── UPDATED BOTTOM NAV ───────────────────────────────────────────────────────
 
 function BottomNav({ tab, setTab }) {
   const items = [
-    {id:"today",    icon:"📋", label:"Today"},
-    {id:"week",     icon:"🗓",  label:"Week"},
-    {id:"progress", icon:"📈", label:"Progress"},
-    {id:"tools",    icon:"🔧", label:"Tools"},
-    {id:"race",     icon:"🏁", label:"Race"},
+    {id:"today",   icon:"📋", label:"Today"},
+    {id:"week",    icon:"🗓",  label:"Week"},
+    {id:"progress",icon:"📈", label:"Progress"},
+    {id:"tools",   icon:"🔧", label:"Tools"},
+    {id:"garmin",  icon:"⌚", label:"Garmin"},
   ];
   return (
     <nav style={{position:"fixed",bottom:0,left:0,right:0,background:"#0d1117",borderTop:"1px solid #1e293b",display:"flex",zIndex:100,paddingBottom:"env(safe-area-inset-bottom)"}}>
@@ -3521,13 +3896,11 @@ export default function App() {
   useNotificationChecker(currentWeek);
   useWeeklySummaryNotification(currentWeek);
 
-  // Reset to actual current week when switching to Today tab
   const handleTabChange = (newTab) => {
     if(newTab === "today") setCurrentWeek(getCurrentTrainingWeek());
     setTab(newTab);
   };
 
-  // PR detection
   useEffect(()=>{
     const handler = (e)=>{ setPrExercise(e.detail.exercise); setPrKg(e.detail.kg); setPrShow(true); };
     window.addEventListener("ironman_pr", handler);
@@ -3537,7 +3910,7 @@ export default function App() {
   const t = THEMES[theme] || THEMES.dark;
 
   return (
-    <div style={{background:t.bg,minHeight:"100dvh",color:t.text,fontFamily:"'Inter',system-ui,sans-serif",maxWidth:480,margin:"0 auto",position:"relative",transition:"background 0.2s, color 0.2s"}}>
+    <div style={{background:t.bg,minHeight:"100dvh",color:t.text,fontFamily:"'Inter',system-ui,sans-serif",maxWidth:480,margin:"0 auto",position:"relative",transition:"background 0.2s,color 0.2s"}}>
       <PRBell show={prShow} exercise={prExercise} kg={prKg} onClose={()=>setPrShow(false)}/>
       {tab==="today"    && <TodayView    currentWeek={currentWeek} setCurrentWeek={setCurrentWeek} onPR={(ex,kg)=>{setPrExercise(ex);setPrKg(kg);setPrShow(true);}}/>}
       {tab==="week"     && <WeekView     currentWeek={currentWeek} setCurrentWeek={setCurrentWeek}/>}
@@ -3545,6 +3918,7 @@ export default function App() {
       {tab==="stretch"  && <StretchingView/>}
       {tab==="tools"    && <ToolsView currentWeek={currentWeek} theme={theme} setTheme={setTheme}/>}
       {tab==="race"     && <RaceView currentWeek={currentWeek}/>}
+      {tab==="garmin"   && <GarminImportView/>}
       {tab==="notif"    && <NotificationsView/>}
       <BottomNav tab={tab} setTab={handleTabChange}/>
     </div>
