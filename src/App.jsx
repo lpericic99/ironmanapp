@@ -35,20 +35,18 @@ function makeWeek(w) {
     return [
       { id:"mon-str", day:"Mon", time:"Evening", type:"strength", icon:"🏋️",
         title:`Strength A — Upper Body${isRecovery?" (Recovery)":""}`,
-        sets:[
-          {label:"Bench Press",          reps:`4×${isRecovery?6:8}`,   note:`~${bench}kg` },
-          {label:w<=8?"Pull-ups":"Weighted Pull-ups", reps:`4×${isRecovery?6:8}`, note:w<=8?"Bodyweight":`+${pullW}kg` },
-          {label:"Overhead Press",       reps:`3×${isRecovery?6:8}`,   note:"Barbell or dumbbell" },
-          {label:"Cable Row",            reps:`3×${isRecovery?8:10}`,  note:"Squeeze shoulder blades" },
-          {label:"Incline DB Press",     reps:`3×${isRecovery?8:10}`,  note:"Upper chest" },
-          {label:"Lat Pulldown",         reps:`3×${isRecovery?10:12}`, note:"Wide grip" },
-          {label:"Lateral Raise",        reps:"3×15",                  note:"Light — side delts" },
-          {label:"Tricep Pushdown",      reps:"3×12",                  note:"" },
-          {label:"Dumbbell Curl",        reps:"3×12",                  note:"" },
-          {label:"Face Pull",            reps:"3×15",                  note:"Rear delt + rotator cuff" },
-          {label:"Plank",                reps:`3×${30+w*2}s`,          note:"" },
-        ], cardio:null },
-
+        
+sets:[
+  {label:"Bench Press",          reps:`4×${isRecovery?6:8}`,  note:`~${bench}kg` },
+  {label:"Weighted Pull-ups",    reps:`4×${isRecovery?6:8}`,  note:`+${pullW}kg` },
+  {label:"Overhead Press",       reps:`3×${isRecovery?6:8}`,  note:"Barbell or dumbbell" },
+  {label:"Cable Row",            reps:`3×${isRecovery?8:10}`, note:"Squeeze shoulder blades" },
+  {label:"Lateral Raise",        reps:"3×15",                 note:"Light — side delts" },
+  {label:"Tricep Pushdown",      reps:"3×12",                 note:"" },
+  {label:"Dumbbell Curl",        reps:"3×12",                 note:"" },
+  {label:"Face Pull",            reps:"3×15",                 note:"Rear delt + rotator cuff" },
+  {label:"Plank",                reps:`3×${30+w*2}s`,         note:"" },
+], cardio:null },
       { id:"tue-swm", day:"Tue", time:"Morning", type:"swim", icon:"🏊",
         title:`OW Swim — ${w<=4?"Technique":w<=8?"Form Focus":w<=12?"Building Pace":"Threshold Intro"} Wk${w}`,
         sets: w<=4?[
