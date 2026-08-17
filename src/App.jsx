@@ -324,17 +324,18 @@ const TYPE_STYLE = {
 };
 
 const MILESTONES = [
-  {week:4,  label:"Swim 800m continuous",           phase:1},
-  {week:8,  label:"Run 20 min no walk breaks",       phase:1},
-  {week:12, label:"Ride 60km",                       phase:1},
+  {week:3,  label:"Swim 20 min continuous",          phase:1},
+  {week:7,  label:"Run 20 min no walk breaks",       phase:1},
+  {week:11, label:"Ride 90 min non-stop",            phase:1},
   {week:16, label:"Lost 8–12kg · Phase 1 complete",  phase:1},
-  {week:20, label:"Run 10K non-stop",                phase:2},
-  {week:24, label:"Swim 1500m",                      phase:2},
-  {week:28, label:"Ride 90km",                       phase:2},
-  {week:36, label:"Half marathon · Phase 2 done",    phase:2},
-  {week:44, label:"Swim 3km open water",             phase:3},
-  {week:52, label:"Ride 160km",                      phase:3},
-  {week:56, label:"Run 2 hours · Phase 3 done",      phase:3},
+  {week:23, label:"Run 10K non-stop",                phase:2},
+  {week:27, label:"Swim 1500m continuous",           phase:2},
+  {week:31, label:"Ride 115km",                      phase:2},
+  {week:35, label:"Run 90 min continuous · Phase 2 done", phase:2},
+  {week:43, label:"Swim 3km",                        phase:3},
+  {week:47, label:"Ride 144km",                      phase:3},
+  {week:51, label:"Run 2 hours",                     phase:3},
+  {week:55, label:"Ride 160km · Phase 3 peak",       phase:3},
   {week:63, label:"🏁 RACE DAY — Ironman Emilia-Romagna", phase:4},
 ];
 
