@@ -10,29 +10,21 @@ const PHASES = [
 ];
 
 // ─── WEEK-BY-WEEK SCHEDULES ───────────────────────────────────────────────────
-// Each week has individual targets. Recovery weeks (4,8,12,16,20,24,28,32,36,40,44,48,52,56) are ~80% volume.
+// Replace your entire existing makeWeek function with this one.
+// Starts at "function makeWeek(w) {" and ends at the closing "}" just before
+// "// Build schedule cache for all 63 weeks"
 
 function makeWeek(w) {
-  // Helper: is this week an OW summer week?
-  // Weeks 1–16 = Jun–Sep 2026 (summer)
-  // Weeks 17–45 = Oct 2026–Jun 2027 (pool/winter)
-  // Weeks 46–63 = Jul–Sep 2027 (summer again)
   const isOWSummer = w<=16 || w>=46;
 
   // ── PHASE 1: Foundation & Fat Loss (weeks 1–16) ── ALL SUMMER / OW ────────
   if(w<=16) {
     const isRecovery = w%4===0;
-    // Time-based swim targets for OW (minutes)
-    const swimMin = isRecovery
-      ? [18,22,20,18,22,26,24,22,26,30,28,25,30,34,32,28][w-1]
-      :  [18,22,20,18,22,26,24,22,26,30,28,25,30,34,32,28][w-1];
-    // Run intervals
+    const swimMin = [18,22,20,18,22,26,24,22,26,30,28,25,30,34,32,28][w-1];
     const runRatio = w<=4?"2min run / 1min walk × 13 rounds":w<=8?"3min run / 1min walk × 11 rounds":w<=12?"5min run / 1min walk × 9 rounds":"8min run / 1min walk × 7 rounds";
     const runMin   = isRecovery?30: w<=4?40:w<=8?45:w<=12?50:55;
-    // Bike
     const midBike  = isRecovery?50: w<=4?65:w<=8?75:w<=12?85:90;
     const longBike = isRecovery?60: w<=4?75:w<=8?90:w<=12?105:120;
-    // Strength weights (progressive overload ~2.5kg every 2 weeks)
     const squat  = 110 + Math.floor((w-1)/2)*2;
     const rdl    = 90  + Math.floor((w-1)/2)*2;
     const bench  = 85  + Math.floor((w-1)/2)*2;
@@ -42,71 +34,85 @@ function makeWeek(w) {
 
     return [
       { id:"mon-str", day:"Mon", time:"Evening", type:"strength", icon:"🏋️",
-        title:`Strength A — Full Body${isRecovery?" (Recovery — lighter)":""}`,
+        title:`Strength A — Upper Body${isRecovery?" (Recovery)":""}`,
         sets:[
-          {label:"Back Squat",        reps:`4×${isRecovery?6:8}`,  note:`~${squat}kg${isRecovery?", easy tempo":""}` },
-          {label:"Romanian Deadlift", reps:`4×${isRecovery?6:8}`,  note:`~${rdl}kg` },
-          {label:"Bench Press",       reps:`4×${isRecovery?6:8}`,  note:`~${bench}kg` },
+          {label:"Bench Press",          reps:`4×${isRecovery?6:8}`,   note:`~${bench}kg` },
           {label:w<=8?"Pull-ups":"Weighted Pull-ups", reps:`4×${isRecovery?6:8}`, note:w<=8?"Bodyweight":`+${pullW}kg` },
-          {label:"Farmer Carry",      reps:`3×${w<=8?"40":"50"}m`, note:"" },
-          {label:"Plank",             reps:`3×${30+w*2}s`,         note:"" },
+          {label:"Overhead Press",       reps:`3×${isRecovery?6:8}`,   note:"Barbell or dumbbell" },
+          {label:"Cable Row",            reps:`3×${isRecovery?8:10}`,  note:"Squeeze shoulder blades" },
+          {label:"Incline DB Press",     reps:`3×${isRecovery?8:10}`,  note:"Upper chest" },
+          {label:"Lat Pulldown",         reps:`3×${isRecovery?10:12}`, note:"Wide grip" },
+          {label:"Lateral Raise",        reps:"3×15",                  note:"Light — side delts" },
+          {label:"Tricep Pushdown",      reps:"3×12",                  note:"" },
+          {label:"Dumbbell Curl",        reps:"3×12",                  note:"" },
+          {label:"Face Pull",            reps:"3×15",                  note:"Rear delt + rotator cuff" },
+          {label:"Plank",                reps:`3×${30+w*2}s`,          note:"" },
         ], cardio:null },
+
       { id:"tue-swm", day:"Tue", time:"Morning", type:"swim", icon:"🏊",
         title:`OW Swim — ${w<=4?"Technique":w<=8?"Form Focus":w<=12?"Building Pace":"Threshold Intro"} Wk${w}`,
         sets: w<=4?[
-          {label:"Easy warm-up",   reps:"5 min",  note:"Gentle entry, get comfortable in open water"},
-          {label:"Catch-up drill", reps:"4×1 min",note:"Focus on reach and pull — sight every 8 strokes"},
-          {label:"Easy continuous",reps:"8 min",  note:"Relax stroke, breathe every 3"},
-          {label:"Cool-down",      reps:"3 min",  note:"Easy back to shore"},
+          {label:"Easy warm-up",    reps:"5 min",   note:"Gentle entry, get comfortable in open water"},
+          {label:"Catch-up drill",  reps:"4×1 min", note:"Focus on reach and pull — sight every 8 strokes"},
+          {label:"Easy continuous", reps:"8 min",   note:"Relax stroke, breathe every 3"},
+          {label:"Cool-down",       reps:"3 min",   note:"Easy back to shore"},
         ]:w<=8?[
-          {label:"Easy warm-up",    reps:"5 min",  note:""},
-          {label:"Rotation drills", reps:"3×2 min",note:"Body rotation, feel the catch"},
+          {label:"Easy warm-up",    reps:"5 min",   note:""},
+          {label:"Rotation drills", reps:"3×2 min", note:"Body rotation, feel the catch"},
           {label:"Continuous swim", reps:`${swimMin-10} min`, note:"Steady pace, sight every 8 strokes"},
-          {label:"Cool-down",       reps:"3 min",  note:""},
+          {label:"Cool-down",       reps:"3 min",   note:""},
         ]:w<=12?[
-          {label:"Warm-up",         reps:"5 min",  note:"Easy"},
+          {label:"Warm-up",         reps:"5 min",   note:"Easy"},
           {label:"Build sets",      reps:`3×${Math.round((swimMin-10)/3)} min`, note:"Build pace each rep, 1 min easy between"},
-          {label:"Steady swim",     reps:"8 min",  note:"Comfortable controlled pace"},
-          {label:"Cool-down",       reps:"3 min",  note:""},
+          {label:"Steady swim",     reps:"8 min",   note:"Comfortable controlled pace"},
+          {label:"Cool-down",       reps:"3 min",   note:""},
         ]:[
-          {label:"Warm-up",         reps:"5 min",  note:""},
-          {label:"Threshold efforts",reps:`4×${Math.round((swimMin-10)/4)} min`,note:"Solid effort — harder than easy but sustainable"},
-          {label:"Easy cool-down",  reps:"5 min",  note:""},
+          {label:"Warm-up",         reps:"5 min",   note:""},
+          {label:"Threshold efforts",reps:`4×${Math.round((swimMin-10)/4)} min`, note:"Solid effort — harder than easy but sustainable"},
+          {label:"Easy cool-down",  reps:"5 min",   note:""},
         ],
         cardio:{label:"Total OW swim time", unit:"min", placeholder:String(swimMin),
           note:"🌊 Open water — time based. Log actual time swum. No need to measure distance."} },
+
       { id:"wed-bik", day:"Wed", time:"Evening", type:"bike", icon:"🚴",
         title:`Zone 2 Bike${w<=8?" + Core":w<=12?" + StairMaster":" + Core"}`,
         sets: w<=8?[
-          {label:"Dead bug",   reps:"3×12", note:"Slow, controlled"},
-          {label:"Bird dog",   reps:"3×12", note:"Each side"},
-          {label:"Side plank", reps:"2×30s",note:"Each side"},
-          {label:"Hip bridge", reps:"3×15", note:""},
-        ]:w<=12?[]:[ 
-          {label:"Dead bug",       reps:"3×12", note:""},
-          {label:"Pallof press",   reps:"3×12", note:"Each side"},
-          {label:"Side plank",     reps:"3×40s",note:"Each side"},
-          {label:"Hip bridge",     reps:"3×20", note:""},
+          {label:"Dead bug",   reps:"3×12",  note:"Slow, controlled"},
+          {label:"Bird dog",   reps:"3×12",  note:"Each side"},
+          {label:"Side plank", reps:"2×30s", note:"Each side"},
+          {label:"Hip bridge", reps:"3×15",  note:""},
+        ]:w<=12?[]:[
+          {label:"Dead bug",     reps:"3×12",  note:""},
+          {label:"Pallof press", reps:"3×12",  note:"Each side"},
+          {label:"Side plank",   reps:"3×40s", note:"Each side"},
+          {label:"Hip bridge",   reps:"3×20",  note:""},
         ],
-        cardio:{label:w<=8?"Ride duration":w<=12?"Bike + Stair (min)":"Ride duration", unit:"min", placeholder:String(midBike),
-          note:w<=8?"Full Zone 2 — can hold a full conversation":w<=12?"35min bike then 20min StairMaster":"Zone 2 steady — HR stays conversational"} },
+        cardio:{label:w<=8?"Ride duration":w<=12?"Bike + Stair (min)":"Ride duration", unit:"min",
+          placeholder:w<=12?"55":String(midBike),
+          note:w<=8?"Full Zone 2 — can hold a full conversation":w<=12?"35min bike then 20min StairMaster (55 min total)":"Zone 2 steady — HR stays conversational"} },
+
       { id:"thu-str", day:"Thu", time:"Evening", type:"strength", icon:"🏋️",
-        title:`Strength B — Lower & Posterior${isRecovery?" (Recovery)":""}`,
+        title:`Strength B — Lower Body${isRecovery?" (Recovery)":""}`,
         sets:[
-          {label:"Deadlift",             reps:`4×${isRecovery?4:6}`,  note:`~${dl}kg${isRecovery?", easy":""}` },
-          {label:"Bulgarian Split Squat",reps:`3×${isRecovery?8:10}`, note:"Each leg" },
-          {label:"Hip Thrust",           reps:`4×${isRecovery?8:10}`, note:`~${hipThr}kg` },
-          {label:"Cable Row",            reps:`3×${isRecovery?10:12}`,note:"Heavy" },
-          {label:"Lat Pulldown",         reps:`3×${isRecovery?10:12}`,note:"" },
-          ...(w>8?[{label:"Face Pull",   reps:"3×15",                 note:"Light, high reps"}]:[]),
+          {label:"Back Squat",            reps:`4×${isRecovery?4:6}`,  note:`~${squat}kg` },
+          {label:"Romanian Deadlift",     reps:`3×${isRecovery?6:8}`,  note:`~${rdl}kg — hamstrings` },
+          {label:"Bulgarian Split Squat", reps:`3×${isRecovery?8:10}`, note:"Each leg" },
+          {label:"Hip Thrust",            reps:`3×${isRecovery?8:10}`, note:`~${hipThr}kg — glutes` },
+          {label:"Leg Curl",              reps:"3×12",                 note:"Hamstring isolation" },
+          {label:"Calf Raise",            reps:"4×15",                 note:"Critical at your bodyweight" },
+          {label:"Hanging Leg Raise",     reps:"3×12",                 note:"Core" },
+          {label:"Side Plank",            reps:`3×${25+w}s`,           note:"Each side" },
         ], cardio:null },
+
       { id:"fri-run", day:"Fri", time:"Morning", type:"run", icon:"🏃",
         title:`Run Intervals — Week ${w}`,
         sets:[], cardio:{label:"Total duration", unit:"min", placeholder:String(runMin), note:runRatio} },
+
       { id:"sat-bik", day:"Sat", time:"Morning", type:"bike", icon:"🚴",
         title:`Long Ride — ${longBike}min${isRecovery?" (Easy Recovery)":""}`,
         sets:[], cardio:{label:"Ride duration", unit:"min", placeholder:String(longBike),
           note:w<=8?"All Zone 2, flat terrain":w<=12?"Zone 2, start nutrition practice every 45min":"Zone 2, eat every 40min, building endurance"} },
+
       { id:"sun-rst", day:"Sun", time:w<=8?"—":"Morning", type:w<=8?"rest":"swim", icon:w<=8?"😴":"🏊",
         title:w<=8?"Rest / Active Recovery":`Easy OW Swim — ${Math.round(15+w*1.2)}min`,
         sets:[], cardio:w<=8?null:{label:"Easy OW swim", unit:"min", placeholder:String(Math.round(15+w*1.2)),
@@ -118,54 +124,69 @@ function makeWeek(w) {
   if(w<=36) {
     const wInPhase = w-16;
     const isRecovery = wInPhase%4===0;
-    const swimM   = isRecovery ? 1600 : Math.min(2600, 1800+wInPhase*60);
-    const longBikeKm = isRecovery ? 60  : Math.min(120, 55+wInPhase*4);
-    const runMin  = isRecovery ? 45  : Math.min(90, 45+wInPhase*3);
-    const brickTotal= isRecovery ? 90  : Math.min(185, 100+wInPhase*5);
+    const swimM      = isRecovery ? 1600 : Math.min(2600, 1800+wInPhase*60);
+    const longBikeKm = isRecovery ? 60   : Math.min(120, 55+wInPhase*4);
+    const runMin     = isRecovery ? 45   : Math.min(90, 45+wInPhase*3);
+    const brickTotal = isRecovery ? 90   : Math.min(185, 100+wInPhase*5);
     const dl     = Math.min(165, 148+Math.floor(wInPhase/2));
     const bench  = Math.min(108, 100+Math.floor(wInPhase/3));
-    const pullW  = Math.min(22, 14+Math.floor(wInPhase/3));
+    const pullW  = Math.min(22,  14+Math.floor(wInPhase/3));
+    const squat  = Math.min(145, 125+Math.floor(wInPhase/2));
+    const hipThr = Math.min(120, 100+Math.floor(wInPhase/2));
 
     return [
       { id:"mon-str", day:"Mon", time:"Evening", type:"strength", icon:"🏋️",
-        title:`Strength — Upper / Pull${isRecovery?" (Recovery)":""}`,
+        title:`Strength — Upper Body${isRecovery?" (Recovery)":""}`,
         sets:[
           {label:"Weighted Pull-ups", reps:`4×${isRecovery?3:5}`,  note:`+${pullW}kg` },
           {label:"Bench Press",       reps:`4×${isRecovery?3:5}`,  note:`~${bench}kg` },
+          {label:"Overhead Press",    reps:`3×${isRecovery?5:6}`,  note:"Strict" },
           {label:"Cable Row",         reps:`3×${isRecovery?6:8}`,  note:"Heavy" },
-          {label:"OHP",               reps:`3×${isRecovery?6:8}`,  note:"" },
-          {label:"Face Pull",         reps:"3×15",                  note:"" },
+          {label:"Dumbbell Bench",    reps:`3×${isRecovery?8:10}`, note:"Full range" },
+          {label:"Lateral Raise",     reps:"3×15",                 note:"Side delts" },
+          {label:"Skull Crusher",     reps:"3×10",                 note:"Triceps" },
+          {label:"Hammer Curl",       reps:"3×12",                 note:"Biceps + forearms" },
+          {label:"Face Pull",         reps:"3×15",                 note:"Shoulder health" },
         ], cardio:null },
+
       { id:"tue-swm", day:"Tue", time:"Morning", type:"swim", icon:"🏊",
         title:`Swim — ${wInPhase<=8?"Threshold":"Race Pace"} Week ${w}`,
         sets:[
-          {label:"Warm-up",     reps:`${wInPhase<=8?"300":"400"}m`, note:"" },
-          {label:"Main sets",   reps:`${wInPhase<=8?`5×200m`:`${Math.min(6,3+Math.floor(wInPhase/5))}×300m`}`, note:"30s rest, controlled effort" },
-          {label:"Fast 100s",   reps:`${wInPhase<=8?"4":"6"}×100m`, note:"Hard" },
-          {label:"Cool-down",   reps:"200m", note:"" },
+          {label:"Warm-up",   reps:`${wInPhase<=8?"300":"400"}m`, note:"" },
+          {label:"Main sets", reps:`${wInPhase<=8?`5×200m`:`${Math.min(6,3+Math.floor(wInPhase/5))}×300m`}`, note:"30s rest, controlled effort" },
+          {label:"Fast 100s", reps:`${wInPhase<=8?"4":"6"}×100m`, note:"Hard" },
+          {label:"Cool-down", reps:"200m", note:"" },
         ],
         cardio:{label:"Total distance", unit:"m", placeholder:String(swimM)} },
+
       { id:"wed-brk", day:"Wed", time:"Evening", type:"brick", icon:"⚡",
         title:`Brick: Bike → Run — Week ${w}`,
         sets:[], cardio:{label:"Bike + Run total", unit:"min", placeholder:String(brickTotal),
           note:isRecovery?`Easy brick — ${Math.round(brickTotal*0.75)}min bike + ${Math.round(brickTotal*0.25)}min run`:`${Math.round(brickTotal*0.78)}min bike + ${Math.round(brickTotal*0.22)}min run — no break between`} },
+
       { id:"thu-str", day:"Thu", time:"Evening", type:"strength", icon:"🏋️",
         title:`Strength — Lower Body${isRecovery?" (Recovery)":""}`,
         sets:[
-          {label:"Deadlift",             reps:`3×${isRecovery?3:5}`,  note:`~${dl}kg` },
-          {label:"Bulgarian Split Squat",reps:`3×${isRecovery?6:8}`,  note:"Each leg" },
-          {label:"Leg Press",            reps:`3×${isRecovery?8:10}`, note:"Heavy" },
-          {label:"Nordic Curl",          reps:`3×${isRecovery?4:6}`,  note:"" },
-          {label:"Hip Thrust",           reps:`3×${isRecovery?8:10}`, note:"" },
+          {label:"Back Squat",            reps:`3×${isRecovery?3:5}`,  note:`~${squat}kg` },
+          {label:"Deadlift",              reps:`3×${isRecovery?3:5}`,  note:`~${dl}kg` },
+          {label:"Bulgarian Split Squat", reps:`3×${isRecovery?6:8}`,  note:"Each leg" },
+          {label:"Hip Thrust",            reps:`3×${isRecovery?8:10}`, note:`~${hipThr}kg` },
+          {label:"Nordic Curl",           reps:`3×${isRecovery?4:6}`,  note:"Hamstring injury prevention" },
+          {label:"Single-Leg Calf Raise", reps:"3×12",                 note:"Each leg" },
+          {label:"Pallof Press",          reps:"3×12",                 note:"Each side — anti-rotation" },
+          {label:"Hanging Leg Raise",     reps:"3×15",                 note:"" },
         ], cardio:null },
+
       { id:"fri-run", day:"Fri", time:"Morning", type:"run", icon:"🏃",
         title:`Run — ${wInPhase<=8?"Building to 10K":wInPhase<=16?"10K Consolidation":"Half Marathon Build"} Wk${w}`,
         sets:[], cardio:{label:"Duration", unit:"min", placeholder:String(runMin),
           note:isRecovery?"Easy Zone 2 — short and relaxed":wInPhase<=8?"Continuous Zone 2 — building to 10K":wInPhase<=16?"10K at comfortable pace":"Building toward half marathon distance"} },
+
       { id:"sat-bik", day:"Sat", time:"Morning", type:"bike", icon:"🚴",
         title:`Long Ride — ${longBikeKm}km`,
         sets:[], cardio:{label:"Distance", unit:"km", placeholder:String(longBikeKm),
           note:isRecovery?"Easy recovery ride":"Zone 2 steady — eat every 40min, hydrate well"} },
+
       { id:"sun-run", day:"Sun", time:"Morning", type:"run", icon:"🏃",
         title:`Long Run — ${Math.round(runMin*0.8)}min Easy`,
         sets:[], cardio:{label:"Duration", unit:"min", placeholder:String(Math.round(runMin*0.8)),
@@ -177,54 +198,64 @@ function makeWeek(w) {
   if(w<=56) {
     const wInPhase = w-36;
     const isRecovery = wInPhase%4===0;
-    const isOW = w>=46; // July 2027 onward = summer OW
-    const swimM    = isRecovery ? 2400 : Math.min(4000, 2600+wInPhase*80);
-    const swimMin  = isRecovery ? 45   : Math.min(85, 50+wInPhase*2); // OW time targets
-    const longBikeKm= isRecovery ? 100  : Math.min(175, 100+wInPhase*4);
+    const isOW = w>=46;
+    const swimM     = isRecovery ? 2400 : Math.min(4000, 2600+wInPhase*80);
+    const swimMin   = isRecovery ? 45   : Math.min(85, 50+wInPhase*2);
+    const longBikeKm= isRecovery ? 100  : Math.min(160, 100+wInPhase*4);
     const longRunMin= isRecovery ? 70   : Math.min(135, 75+wInPhase*3);
-    const threshMin = isRecovery ? 50   : Math.min(80,  55+wInPhase*1);
-    const brickTotal= isRecovery ? 170  : Math.min(290, 190+wInPhase*5);
+    const threshMin = isRecovery ? 50   : Math.min(80, 55+wInPhase*1);
+    const brickTotal= isRecovery ? 160  : Math.min(220, 180+wInPhase*4);
 
     return [
       { id:"mon-str", day:"Mon", time:"Evening", type:"strength", icon:"🏋️",
-        title:`Strength — 1× Maintenance${w>=50?" (Last weeks — winding down)":""}`,
+        title:`Strength — 1× Maintenance${w>=50?" (Winding down)":""}`,
         sets:[
-          {label:"Deadlift",          reps:"3×5", note:`~${Math.min(165,155+Math.floor(wInPhase/4))}kg` },
-          {label:"Bench Press",       reps:"3×5", note:"" },
-          {label:"Weighted Pull-up",  reps:"3×5", note:"" },
-          {label:"Split Squat",       reps:"2×8", note:"Each leg" },
+          {label:"Deadlift",         reps:"3×5",  note:`~${Math.min(165,155+Math.floor(wInPhase/4))}kg` },
+          {label:"Bench Press",      reps:"3×5",  note:"Maintain upper strength" },
+          {label:"Weighted Pull-up", reps:"3×5",  note:"" },
+          {label:"Overhead Press",   reps:"2×8",  note:"" },
+          {label:"Split Squat",      reps:"2×8",  note:"Each leg" },
+          {label:"Face Pull",        reps:"3×15", note:"Non-negotiable" },
+          {label:"Calf Raise",       reps:"3×15", note:"Achilles protection" },
+          {label:"Plank",            reps:"3×60s",note:"" },
         ], cardio:null },
+
       { id:"tue-swm", day:"Tue", time:"Morning", type:"swim", icon:"🏊",
         title:isOW?`OW Swim — Long Effort Wk${w}`:`Swim — Long Sets Week ${w}`,
         sets: isOW?[
-          {label:"Easy warm-up",      reps:"5 min",  note:"Settle into OW, check sighting lines"},
+          {label:"Easy warm-up",       reps:"5 min", note:"Settle into OW, check sighting lines"},
           {label:"Steady long effort", reps:`${swimMin-15} min`, note:"Controlled pace — harder than easy but sustainable. Sight every 8 strokes."},
-          {label:"Race pace effort",  reps:"5 min",  note:"Push to race pace — practice positive split strategy"},
-          {label:"Easy cool-down",    reps:"5 min",  note:""},
+          {label:"Race pace effort",   reps:"5 min", note:"Push to race pace — practice positive split strategy"},
+          {label:"Easy cool-down",     reps:"5 min", note:""},
         ]:[
-          {label:"Warm-up",   reps:`${wInPhase<=8?"500":"600"}m`,  note:"" },
+          {label:"Warm-up",   reps:`${wInPhase<=8?"500":"600"}m`, note:"" },
           {label:"Main sets", reps:`${Math.min(5,3+Math.floor(wInPhase/5))}×${wInPhase<=8?"400":"500"}m`, note:"45s rest, steady effort" },
           {label:"Cool-down", reps:"200m", note:"" },
         ],
         cardio: isOW
           ? {label:"Total OW swim time", unit:"min", placeholder:String(swimMin), note:"🌊 Open water — time based. No distance needed."}
           : {label:"Total distance", unit:"m", placeholder:String(swimM)} },
+
       { id:"wed-brk", day:"Wed", time:"Evening", type:"brick", icon:"⚡",
         title:`Big Brick — Week ${w}`,
         sets:[], cardio:{label:"Bike + Run total", unit:"min", placeholder:String(brickTotal),
           note:isRecovery?"Recovery brick — shorter effort":`${Math.round(brickTotal*0.77)}min bike + ${Math.round(brickTotal*0.23)}min run — race simulation`} },
+
       { id:"thu-run", day:"Thu", time:"Morning", type:"run", icon:"🏃",
         title:`Threshold Run — Week ${w}`,
         sets:[], cardio:{label:"Duration", unit:"min", placeholder:String(threshMin),
           note:isRecovery?"Easy Zone 2 only":`${Math.round(threshMin*0.35)}min Zone 2 warm up → ${Math.round(threshMin*0.35)}min Zone 3 → ${Math.round(threshMin*0.3)}min cool down`} },
+
       { id:"fri-swm", day:"Fri", time:"Morning", type:"swim", icon:"🏊",
         title:`OW Swim — Navigation Wk${w}`,
         sets:[], cardio:{label:"Duration", unit:"min", placeholder:String(Math.round(35+wInPhase*1.5)),
           note:"🌊 Sight every 8 strokes. Practice race start pace first 200m then settle."} },
+
       { id:"sat-bik", day:"Sat", time:"Morning", type:"bike", icon:"🚴",
         title:`Long Ride — ${longBikeKm}km`,
         sets:[], cardio:{label:"Distance", unit:"km", placeholder:String(longBikeKm),
-          note:isRecovery?"Easy recovery ride — Zone 2 only":longBikeKm>=150?"Peak volume ride — eat every 30min, this is race prep":"Zone 2 long ride — nutrition every 40min"} },
+          note:isRecovery?"Easy recovery ride — Zone 2 only":longBikeKm>=145?"Peak volume ride — eat every 30min, this is race prep":"Zone 2 long ride — nutrition every 40min"} },
+
       { id:"sun-run", day:"Sun", time:"Morning", type:"run", icon:"🏃",
         title:`Long Run — ${longRunMin}min`,
         sets:[], cardio:{label:"Duration", unit:"min", placeholder:String(longRunMin),
@@ -242,31 +273,37 @@ function makeWeek(w) {
     { id:"mon-rst", day:"Mon", time:"—", type:"rest", icon:"😴",
       title:`Full Rest — Taper Week ${wInTaper}`,
       sets:[], cardio:null },
+
     { id:"tue-swm", day:"Tue", time:"Morning", type:"swim", icon:"🏊",
       title:`OW Swim — Sharp & Short Wk${w}`,
       sets:[
-        {label:"Easy warm-up",    reps:"5 min",  note:"Get in, settle, feel the water"},
-        {label:"Race pace bursts",reps:`3×3 min`, note:"Race effort with 2 min easy between — feel fast"},
-        {label:"Easy cool-down",  reps:"5 min",  note:""},
+        {label:"Easy warm-up",     reps:"5 min",   note:"Get in, settle, feel the water"},
+        {label:"Race pace bursts", reps:`3×3 min`, note:"Race effort with 2 min easy between — feel fast"},
+        {label:"Easy cool-down",   reps:"5 min",   note:""},
       ],
       cardio:{label:"Total OW swim time", unit:"min", placeholder:String(swimMin),
         note:"🌊 Open water — time based. Feel fast and smooth, not grinding."} },
+
     { id:"wed-bik", day:"Wed", time:"Evening", type:"bike", icon:"🚴",
       title:`Bike — ${bikeMin}min, Stay Sharp`,
       sets:[], cardio:{label:"Duration", unit:"min", placeholder:String(bikeMin),
         note:`${Math.round(bikeMin*0.7)}min easy + ${Math.round(bikeMin*0.3)}min race pace efforts`} },
+
     { id:"thu-run", day:"Thu", time:"Morning", type:"run", icon:"🏃",
       title:`Easy Run — ${runMin}min`,
       sets:[], cardio:{label:"Duration", unit:"min", placeholder:String(runMin),
         note:wInTaper>=5?"Short and easy. Legs should feel springy.":"Keep it easy — absorbing the training."} },
+
     { id:"fri-swm", day:"Fri", time:"Morning", type:"swim", icon:"🏊",
       title:`OW Shake-Out${w>=62?" — Race Week":""}`,
       sets:[], cardio:{label:"Duration", unit:"min", placeholder:String(Math.max(15,30-wInTaper*3)),
         note:"🌊 Easy open water. Visualise your race swim. You know this water."} },
+
     { id:"sat-brk", day:"Sat", time:"Morning", type:"brick", icon:"⚡",
       title:w>=62?"Race Simulation Brick — Final":"Brick — Stay Sharp",
       sets:[], cardio:{label:"Bike + Run total", unit:"min", placeholder:String(Math.max(60,130-wInTaper*15)),
         note:`${Math.max(40,90-wInTaper*10)}min bike + ${Math.max(20,40-wInTaper*5)}min run. Full race kit.`} },
+
     { id:"sun-rst", day:"Sun", time:"—", type:"rest", icon:"😴",
       title:w===63?"REST — RACE TOMORROW 🏁":"Full Rest",
       sets:[], cardio:null },
