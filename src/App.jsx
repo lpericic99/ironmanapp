@@ -542,9 +542,8 @@ function TodayView({ currentWeek, setCurrentWeek, onPR }) {
   const [saved, setSaved]         = useState(false);
   const [showRetro, setShowRetro] = useState(false);
 
-  // Travel mode state
-  const [mode, setMode]                   = useState("normal"); // "normal"|"travel"
-  const [travelMode, setTravelMode]       = useState(null);    // null|"postpone"|"alternative"|"custom"
+  const [mode, setMode]                   = useState("normal");
+  const [travelMode, setTravelMode]       = useState(null);
   const [altType, setAltType]             = useState("mobility");
   const [altSetDone, setAltSetDone]       = useState({});
   const [altCardio, setAltCardio]         = useState("");
@@ -566,11 +565,9 @@ function TodayView({ currentWeek, setCurrentWeek, onPR }) {
     else { setMode("normal"); setTravelMode(null); }
   }, [skey, travelKey]);
 
-  // Auto-persist every change to set logs, cardio, and notes — so nothing is lost on navigation
   const autoSaveRef = useRef(false);
   useEffect(() => {
     if(!skey) return;
-    // Skip the very first run right after loading from storage (avoids overwriting with empty initial state)
     if(!autoSaveRef.current) { autoSaveRef.current = true; return; }
     const existing = LS.get(skey) || {};
     LS.set(skey, { ...existing, cardioVal, setLogs, notes, done: existing.done||false });
@@ -579,12 +576,10 @@ function TodayView({ currentWeek, setCurrentWeek, onPR }) {
 
   const save = () => {
     if(!skey) return;
-    // PR detection — compare each logged kg against all previous logs for that exercise
     if(ts && ts.sets && onPR) {
       ts.sets.forEach((s,i) => {
         const kg = parseFloat(setLogs[`${i}_kg`]);
         if(!kg) return;
-        // scan all other weeks for same exercise
         let prevMax = 0;
         for(let w=1; w<=63; w++) {
           if(w===currentWeek) continue;
@@ -635,7 +630,6 @@ function TodayView({ currentWeek, setCurrentWeek, onPR }) {
 
   return (
     <div style={{paddingBottom:90}}>
-      {/* Header */}
       <div style={{background:`linear-gradient(135deg,#0f172a,${phase.dim})`,padding:"20px 16px 14px",borderBottom:"1px solid #1e293b"}}>
         <div style={{fontSize:11,color:phase.color,letterSpacing:2,textTransform:"uppercase",marginBottom:4}}>Week {currentWeek} of 63</div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
@@ -645,15 +639,7 @@ function TodayView({ currentWeek, setCurrentWeek, onPR }) {
             </div>
             <div style={{fontSize:13,color:"#64748b",marginTop:2}}>{phase.name}</div>
           </div>
-          <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
-            <div style={{display:"flex",gap:6}}>
-              <button onClick={()=>setCurrentWeek(w=>Math.max(1,w-1))} style={{background:"#1e293b",border:"none",color:"#94a3b8",borderRadius:8,width:34,height:34,cursor:"pointer",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center"}}>‹</button>
-              <button onClick={()=>setCurrentWeek(w=>Math.min(63,w+1))} style={{background:"#1e293b",border:"none",color:"#94a3b8",borderRadius:8,width:34,height:34,cursor:"pointer",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center"}}>›</button>
-            </div>
-            <span style={{fontSize:10,color:"#334155"}}>change week</span>
-          </div>
         </div>
-        {/* Phase bar */}
         <div style={{marginTop:12}}>
           <div style={{background:"#1e293b",borderRadius:4,height:5,overflow:"hidden"}}>
             <div style={{background:phase.color,height:"100%",borderRadius:4,width:`${Math.min(100,((currentWeek-phase.weeks[0])/(phase.weeks[1]-phase.weeks[0]))*100)}%`,transition:"width 0.4s"}}/>
@@ -664,14 +650,11 @@ function TodayView({ currentWeek, setCurrentWeek, onPR }) {
         </div>
       </div>
 
-      {/* Retroactive log modal */}
       {showRetro && <RetroactiveLog currentWeek={currentWeek} onClose={()=>setShowRetro(false)}/>}
 
       <div style={{padding:"14px 16px"}}>
-        {/* Dashboard summary strip */}
         <DashboardStrip currentWeek={currentWeek}/>
 
-        {/* Missed workout button */}
         <button onClick={()=>setShowRetro(true)}
           style={{width:"100%",background:"rgba(245,158,11,0.08)",border:"1px solid #92400e",borderRadius:10,padding:"9px 14px",marginBottom:12,display:"flex",alignItems:"center",gap:10,cursor:"pointer",textAlign:"left"}}>
           <span style={{fontSize:18}}>📝</span>
@@ -682,7 +665,6 @@ function TodayView({ currentWeek, setCurrentWeek, onPR }) {
           <span style={{color:"#92400e",fontSize:12}}>→</span>
         </button>
 
-        {/* ── TRAVEL MODE BANNER / TOGGLE ── */}
         {mode === "normal" && ts && ts.type !== "rest" && (
           <button onClick={enterTravel} style={{width:"100%",background:"rgba(217,119,6,0.1)",border:"1px solid #92400e",borderRadius:10,padding:"10px 14px",marginBottom:12,display:"flex",alignItems:"center",gap:10,cursor:"pointer",textAlign:"left"}}>
             <span style={{fontSize:20}}>🚗</span>
@@ -707,7 +689,6 @@ function TodayView({ currentWeek, setCurrentWeek, onPR }) {
               <button onClick={exitTravel} style={{background:"none",border:"1px solid #44403c",borderRadius:8,padding:"4px 10px",color:"#78716c",fontSize:11,cursor:"pointer"}}>✕ Cancel</button>
             </div>
 
-            {/* Three options */}
             {!travelMode && (
               <div style={{display:"flex",flexDirection:"column",gap:8}}>
                 <div style={{fontSize:11,color:"#78716c",marginBottom:2}}>What do you want to do?</div>
@@ -729,7 +710,6 @@ function TodayView({ currentWeek, setCurrentWeek, onPR }) {
               </div>
             )}
 
-            {/* ── POSTPONE ── */}
             {travelMode === "postpone" && (
               <div>
                 <button onClick={()=>setTravelMode(null)} style={{background:"none",border:"none",color:"#64748b",fontSize:12,cursor:"pointer",padding:"0 0 10px",display:"flex",alignItems:"center",gap:4}}>‹ Back</button>
@@ -756,13 +736,11 @@ function TodayView({ currentWeek, setCurrentWeek, onPR }) {
               </div>
             )}
 
-            {/* ── ALTERNATIVE ── */}
             {travelMode === "alternative" && (
               <div>
                 <button onClick={()=>setTravelMode(null)} style={{background:"none",border:"none",color:"#64748b",fontSize:12,cursor:"pointer",padding:"0 0 10px",display:"flex",alignItems:"center",gap:4}}>‹ Back</button>
                 <div style={{fontSize:14,fontWeight:700,color:"#e2e8f0",marginBottom:10}}>🏨 Choose alternative</div>
 
-                {/* Type picker */}
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:14}}>
                   {[
                     {id:"mobility", icon:"🧘", label:"Driver stretches"},
@@ -778,7 +756,6 @@ function TodayView({ currentWeek, setCurrentWeek, onPR }) {
                   ))}
                 </div>
 
-                {/* Workout detail */}
                 <div style={{background:"rgba(0,0,0,0.3)",borderRadius:12,padding:14,marginBottom:12}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
                     <div>
@@ -826,14 +803,12 @@ function TodayView({ currentWeek, setCurrentWeek, onPR }) {
               </div>
             )}
 
-            {/* ── CUSTOM ── */}
             {travelMode === "custom" && (
               <div>
                 <button onClick={()=>setTravelMode(null)} style={{background:"none",border:"none",color:"#64748b",fontSize:12,cursor:"pointer",padding:"0 0 10px",display:"flex",alignItems:"center",gap:4}}>‹ Back</button>
                 <div style={{fontSize:14,fontWeight:700,color:"#e2e8f0",marginBottom:4}}>✏️ Log your own workout</div>
                 <div style={{fontSize:12,color:"#64748b",marginBottom:12}}>Add whatever you did — exercises, sets, reps, weight.</div>
 
-                {/* Add exercise form */}
                 <div style={{background:"rgba(0,0,0,0.3)",borderRadius:12,padding:12,marginBottom:12}}>
                   <div style={{fontSize:11,color:"#64748b",marginBottom:8,textTransform:"uppercase",letterSpacing:1}}>Add exercise</div>
                   <input type="text" placeholder="Exercise name (e.g. Push-ups)"
@@ -854,7 +829,6 @@ function TodayView({ currentWeek, setCurrentWeek, onPR }) {
                   </div>
                 </div>
 
-                {/* Exercise list */}
                 {customExercises.length > 0 && (
                   <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:12}}>
                     {customExercises.map((ex,i)=>(
@@ -886,7 +860,6 @@ function TodayView({ currentWeek, setCurrentWeek, onPR }) {
           </div>
         )}
 
-        {/* ── NORMAL SCHEDULED SESSION ── */}
         {mode === "normal" && (
           !ts ? (
           <div style={{background:"#1c1917",border:"1px solid #292524",borderRadius:14,padding:28,textAlign:"center"}}>
@@ -906,7 +879,6 @@ function TodayView({ currentWeek, setCurrentWeek, onPR }) {
                 {done && <div style={{background:"#14532d",border:"1px solid #16a34a",borderRadius:20,padding:"4px 12px",fontSize:12,color:"#86efac",fontWeight:700}}>✓ Done</div>}
               </div>
 
-              {/* Sets */}
               {ts.sets.length > 0 && (
                 <div style={{marginBottom:12}}>
                   <div style={{fontSize:10,color:style.text,letterSpacing:1.5,textTransform:"uppercase",marginBottom:8}}>Sets & Weights</div>
@@ -917,24 +889,38 @@ function TodayView({ currentWeek, setCurrentWeek, onPR }) {
                           <div style={{fontSize:13,fontWeight:600}}>{s.label}</div>
                           <div style={{fontSize:11,color:"#475569",marginTop:1}}>{s.reps}{s.note?` · ${s.note}`:""}</div>
                         </div>
-                        <input
-                          type="number" inputMode="decimal"
-                          placeholder="kg"
-                          value={setLogs[`${i}_kg`]||""}
-                          onChange={e=>setSetLogs(p=>({...p,[`${i}_kg`]:e.target.value}))}
-                          style={{width:54,background:"rgba(255,255,255,0.1)",border:`1px solid ${style.border}80`,borderRadius:7,padding:"6px 4px",color:"#e2e8f0",fontSize:14,fontWeight:700,textAlign:"center"}}
-                        />
+                        {ts.type === "strength" && (
+                          <input
+                            type="number" inputMode="decimal"
+                            placeholder="kg"
+                            value={setLogs[`${i}_kg`]||""}
+                            onChange={e=>setSetLogs(p=>({...p,[`${i}_kg`]:e.target.value}))}
+                            onBlur={e=>{
+                              if(skey && e.target.value){
+                                const ex = LS.get(skey) || {};
+                                LS.set(skey, {...ex, setLogs:{...setLogs,[`${i}_kg`]:e.target.value}, done:ex.done||false});
+                              }
+                            }}
+                            style={{width:54,background:"rgba(255,255,255,0.1)",border:`1px solid ${style.border}80`,borderRadius:7,padding:"6px 4px",color:"#e2e8f0",fontSize:14,fontWeight:700,textAlign:"center"}}
+                          />
+                        )}
                         <button
-                          onClick={()=>setSetLogs(p=>({...p,[`${i}_done`]:!p[`${i}_done`]}))}
+                          onClick={()=>{
+                            const nl = {...setLogs, [`${i}_done`]: !setLogs[`${i}_done`]};
+                            setSetLogs(nl);
+                            if(skey){
+                              const ex = LS.get(skey) || {};
+                              LS.set(skey, {...ex, setLogs: nl, done: ex.done||false});
+                            }
+                          }}
                           style={{background:setLogs[`${i}_done`]?"#14532d":"rgba(255,255,255,0.06)",border:`1px solid ${setLogs[`${i}_done`]?"#16a34a":style.border+"50"}`,borderRadius:7,padding:"6px 10px",color:setLogs[`${i}_done`]?"#86efac":style.text,fontSize:11,cursor:"pointer",fontWeight:600,whiteSpace:"nowrap"}}
-                        >{setLogs[`${i}_done`]?"✓":"Done"}</button>
+                        >{setLogs[`${i}_done`]?"✓ Saved":"Done"}</button>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Cardio */}
               {ts.cardio && (
                 <div style={{background:"rgba(0,0,0,0.3)",borderRadius:10,padding:12}}>
                   <div style={{fontSize:10,color:style.text,letterSpacing:1.5,textTransform:"uppercase",marginBottom:8}}>Cardio / Endurance</div>
@@ -956,7 +942,6 @@ function TodayView({ currentWeek, setCurrentWeek, onPR }) {
               )}
             </div>
 
-            {/* Notes */}
             {skey && <RPELogger sessionKey={skey} />}
             {skey && <WeatherLog sessionKeyStr={skey} />}
             <textarea
@@ -975,7 +960,6 @@ function TodayView({ currentWeek, setCurrentWeek, onPR }) {
     </div>
   );
 }
-
 // ─── WEEK ─────────────────────────────────────────────────────────────────────
 
 function WeekView({ currentWeek, setCurrentWeek }) {
