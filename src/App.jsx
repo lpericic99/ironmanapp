@@ -2423,7 +2423,19 @@ function Zone2Calculator() {
 
 function RPELogger({ sessionKey: skey, onSave }) {
   const [rpe, setRpe] = useState(()=>{ const d=LS.get(skey); return d?.rpe||0; });
-  const RPE_LABELS = ["","😴 Very Easy","😌 Easy","🙂 Moderate","😐 Somewhat Hard","😤 Hard","😓 Hard+","🥵 Very Hard","😰 Very Hard+","😵 Extremely Hard","💀 Max Effort"];
+  const RPE_LABELS = [
+  "",
+  "😴 1 — Rest / almost no effort",
+  "😌 2 — Very easy / recovery",
+  "🙂 3 — Easy / comfortable",
+  "😊 4 — Moderate / steady",
+  "😐 5 — Somewhat hard / controlled",
+  "😤 6 — Hard / strong effort",
+  "🥵 7 — Very hard / difficult to sustain",
+  "😰 8 — Very hard / short-duration effort",
+  "😵 9 — Extremely hard / near maximal",
+  "💀 10 — Maximal / all-out"
+];
   const RPE_COLORS = ["","#22d3ee","#22c55e","#86efac","#fbbf24","#f97316","#fb923c","#ef4444","#dc2626","#b91c1c","#7f1d1d"];
 
   const save = (val) => {
