@@ -121,8 +121,6 @@ function makeWeek(w) {
 
   // ── PHASE 2: Build & Specificity (weeks 17–36) ────────────────────────────
   if(w<=36) {
-  // ── PHASE 2: Build & Specificity (weeks 17–36) ────────────────────────────
-  if(w<=36) {
     const wInPhase = w-16;
     const isRecovery = wInPhase%4===0;
     const swimM      = isRecovery ? 1600 : Math.min(2600, 1800+wInPhase*60);
