@@ -18,36 +18,48 @@ function makeWeek(w) {
   const isOWSummer = w<=16 || w>=46;
 
   // ── PHASE 1: Foundation & Fat Loss (weeks 1–16) ── ALL SUMMER / OW ────────
-  if(w<=16) {
-    const isRecovery = w%4===0;
-    const swimMin = [18,22,20,18,22,26,24,22,26,30,28,25,30,34,32,28][w-1];
-    const runRatio = w<=4?"2min run / 1min walk × 13 rounds":w<=8?"3min run / 1min walk × 11 rounds":w<=12?"5min run / 1min walk × 9 rounds":"8min run / 1min walk × 7 rounds";
-    const runMin   = isRecovery?30: w<=4?40:w<=8?45:w<=12?50:55;
-    const midBike  = isRecovery?50: w<=4?65:w<=8?75:w<=12?85:90;
-    const longBike = isRecovery?60: w<=4?75:w<=8?90:w<=12?105:120;
-    const squat  = 110 + Math.floor((w-1)/2)*2;
-    const rdl    = 90  + Math.floor((w-1)/2)*2;
-    const bench  = 85  + Math.floor((w-1)/2)*2;
-    const dl     = 130 + Math.floor((w-1)/2)*2;
-    const hipThr = 90  + Math.floor((w-1)/2)*2;
-    const pullW  = w<=8?0:5+Math.floor((w-9)/2)*2;
-
-    return [
+ return [
       { id:"mon-str", day:"Mon", time:"Evening", type:"strength", icon:"🏋️",
-        title:`Strength A — Upper Body${isRecovery?" (Recovery)":""}`,
-        
-sets:[
-  {label:"Bench Press",          reps:`4×${isRecovery?6:8}`,  note:`~${bench}kg` },
-  {label:"Weighted Pull-ups",    reps:`4×${isRecovery?6:8}`,  note:`+${pullW}kg` },
-  {label:"Overhead Press",       reps:`3×${isRecovery?6:8}`,  note:"Barbell or dumbbell" },
-  {label:"Cable Row",            reps:`3×${isRecovery?8:10}`, note:"Squeeze shoulder blades" },
-  {label:"Lateral Raise",        reps:"3×15",                 note:"Light — side delts" },
-  {label:"Tricep Pushdown",      reps:"3×12",                 note:"" },
-  {label:"Dumbbell Curl",        reps:"3×12",                 note:"" },
-  {label:"Face Pull",            reps:"3×15",                 note:"Rear delt + rotator cuff" },
-  {label:"Plank",                reps:`3×${30+w*2}s`,         note:"" },
-], cardio:null },
+        title:`Strength B — Lower Body${isRecovery?" (Recovery)":""}`,
+        sets:[
+          {label:"Back Squat",            reps:`4×${isRecovery?4:6}`,  note:`~${squat}kg` },
+          {label:"Romanian Deadlift",     reps:`3×${isRecovery?6:8}`,  note:`~${rdl}kg — hamstrings` },
+          {label:"Bulgarian Split Squat", reps:`3×${isRecovery?8:10}`, note:"Each leg" },
+          {label:"Hip Thrust",            reps:`3×${isRecovery?8:10}`, note:`~${hipThr}kg — glutes` },
+          {label:"Leg Curl",              reps:"3×12",                 note:"Hamstring isolation" },
+          {label:"Calf Raise",            reps:"4×15",                 note:"Critical at your bodyweight" },
+          {label:"Hanging Leg Raise",     reps:"3×12",                 note:"Core" },
+          {label:"Side Plank",            reps:`3×${25+w}s`,           note:"Each side" },
+        ], cardio:null },
+
       { id:"tue-swm", day:"Tue", time:"Morning", type:"swim", icon:"🏊",
+        title:w<=8?"Easy OW Swim — Recovery":`Easy OW Swim — ${Math.round(15+w*1.2)}min`,
+        sets:[],
+        cardio:{label:"Easy OW swim", unit:"min", placeholder:w<=8?"25":String(Math.round(15+w*1.2)),
+          note:"🌊 Easy open water recovery — legs loose before Wednesday's run. No pace target, just move"} },
+
+      { id:"wed-run", day:"Wed", time:"Morning", type:"run", icon:"🏃",
+        title:`Run Intervals — Week ${w}`,
+        sets:[], cardio:{label:"Total duration", unit:"min", placeholder:String(runMin), note:runRatio} },
+
+      { id:"thu-bik", day:"Thu", time:"Evening", type:"bike", icon:"🚴",
+        title:`Zone 2 Bike${w<=8?" + Core":w<=12?" + StairMaster":" + Core"}`,
+        sets: w<=8?[
+          {label:"Dead bug",   reps:"3×12",  note:"Slow, controlled"},
+          {label:"Bird dog",   reps:"3×12",  note:"Each side"},
+          {label:"Side plank", reps:"2×30s", note:"Each side"},
+          {label:"Hip bridge", reps:"3×15",  note:""},
+        ]:w<=12?[]:[
+          {label:"Dead bug",     reps:"3×12",  note:""},
+          {label:"Pallof press", reps:"3×12",  note:"Each side"},
+          {label:"Side plank",   reps:"3×40s", note:"Each side"},
+          {label:"Hip bridge",   reps:"3×20",  note:""},
+        ],
+        cardio:{label:w<=8?"Ride duration":w<=12?"Bike + Stair (min)":"Ride duration", unit:"min",
+          placeholder:w<=12?"55":String(midBike),
+          note:w<=8?"Full Zone 2 — can hold a full conversation":w<=12?"35min bike then 20min StairMaster (55 min total)":"Zone 2 steady — HR stays conversational"} },
+
+      { id:"fri-swm", day:"Fri", time:"Morning", type:"swim", icon:"🏊",
         title:`OW Swim — ${w<=4?"Technique":w<=8?"Form Focus":w<=12?"Building Pace":"Threshold Intro"} Wk${w}`,
         sets: w<=4?[
           {label:"Easy warm-up",    reps:"5 min",   note:"Gentle entry, get comfortable in open water"},
@@ -70,54 +82,28 @@ sets:[
           {label:"Easy cool-down",  reps:"5 min",   note:""},
         ],
         cardio:{label:"Total OW swim time", unit:"min", placeholder:String(swimMin),
-          note:"🌊 Open water — time based. Log actual time swum. No need to measure distance."} },
-
-      { id:"wed-bik", day:"Wed", time:"Evening", type:"bike", icon:"🚴",
-        title:`Zone 2 Bike${w<=8?" + Core":w<=12?" + StairMaster":" + Core"}`,
-        sets: w<=8?[
-          {label:"Dead bug",   reps:"3×12",  note:"Slow, controlled"},
-          {label:"Bird dog",   reps:"3×12",  note:"Each side"},
-          {label:"Side plank", reps:"2×30s", note:"Each side"},
-          {label:"Hip bridge", reps:"3×15",  note:""},
-        ]:w<=12?[]:[
-          {label:"Dead bug",     reps:"3×12",  note:""},
-          {label:"Pallof press", reps:"3×12",  note:"Each side"},
-          {label:"Side plank",   reps:"3×40s", note:"Each side"},
-          {label:"Hip bridge",   reps:"3×20",  note:""},
-        ],
-        cardio:{label:w<=8?"Ride duration":w<=12?"Bike + Stair (min)":"Ride duration", unit:"min",
-          placeholder:w<=12?"55":String(midBike),
-          note:w<=8?"Full Zone 2 — can hold a full conversation":w<=12?"35min bike then 20min StairMaster (55 min total)":"Zone 2 steady — HR stays conversational"} },
-
-      { id:"thu-str", day:"Thu", time:"Evening", type:"strength", icon:"🏋️",
-        title:`Strength B — Lower Body${isRecovery?" (Recovery)":""}`,
-        sets:[
-          {label:"Back Squat",            reps:`4×${isRecovery?4:6}`,  note:`~${squat}kg` },
-          {label:"Romanian Deadlift",     reps:`3×${isRecovery?6:8}`,  note:`~${rdl}kg — hamstrings` },
-          {label:"Bulgarian Split Squat", reps:`3×${isRecovery?8:10}`, note:"Each leg" },
-          {label:"Hip Thrust",            reps:`3×${isRecovery?8:10}`, note:`~${hipThr}kg — glutes` },
-          {label:"Leg Curl",              reps:"3×12",                 note:"Hamstring isolation" },
-          {label:"Calf Raise",            reps:"4×15",                 note:"Critical at your bodyweight" },
-          {label:"Hanging Leg Raise",     reps:"3×12",                 note:"Core" },
-          {label:"Side Plank",            reps:`3×${25+w}s`,           note:"Each side" },
-        ], cardio:null },
-
-      { id:"fri-run", day:"Fri", time:"Morning", type:"run", icon:"🏃",
-        title:`Run Intervals — Week ${w}`,
-        sets:[], cardio:{label:"Total duration", unit:"min", placeholder:String(runMin), note:runRatio} },
+          note:"🌊 Legs rested before tomorrow's long ride. Log actual time swum — no need to measure distance."} },
 
       { id:"sat-bik", day:"Sat", time:"Morning", type:"bike", icon:"🚴",
         title:`Long Ride — ${longBike}min${isRecovery?" (Easy Recovery)":""}`,
         sets:[], cardio:{label:"Ride duration", unit:"min", placeholder:String(longBike),
           note:w<=8?"All Zone 2, flat terrain":w<=12?"Zone 2, start nutrition practice every 45min":"Zone 2, eat every 40min, building endurance"} },
 
-      { id:"sun-rst", day:"Sun", time:w<=8?"—":"Morning", type:w<=8?"rest":"swim", icon:w<=8?"😴":"🏊",
-        title:w<=8?"Rest / Active Recovery":`Easy OW Swim — ${Math.round(15+w*1.2)}min`,
-        sets:[], cardio:w<=8?null:{label:"Easy OW swim", unit:"min", placeholder:String(Math.round(15+w*1.2)),
-          note:"🌊 Easy open water recovery — no pace target, just move"} },
+      { id:"sun-str", day:"Sun", time:"Evening", type:"strength", icon:"🏋️",
+        title:`Strength A — Upper Body${isRecovery?" (Recovery)":""}`,
+        sets:[
+          {label:"Bench Press",          reps:`4×${isRecovery?6:8}`,  note:`~${bench}kg` },
+          {label:"Weighted Pull-ups",    reps:`4×${isRecovery?6:8}`,  note:`+${pullW}kg` },
+          {label:"Overhead Press",       reps:`3×${isRecovery?6:8}`,  note:"Barbell or dumbbell" },
+          {label:"Cable Row",            reps:`3×${isRecovery?8:10}`, note:"Squeeze shoulder blades" },
+          {label:"Lateral Raise",        reps:"3×15",                 note:"Light — side delts" },
+          {label:"Tricep Pushdown",      reps:"3×12",                 note:"" },
+          {label:"Dumbbell Curl",        reps:"3×12",                 note:"" },
+          {label:"Face Pull",            reps:"3×15",                 note:"Rear delt + rotator cuff" },
+          {label:"Plank",                reps:`3×${30+w*2}s`,         note:"" },
+        ], cardio:null },
     ];
   }
-
   // ── PHASE 2: Build & Specificity (weeks 17–36) ────────────────────────────
   if(w<=36) {
     const wInPhase = w-16;
