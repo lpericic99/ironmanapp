@@ -103,7 +103,7 @@ function makeWeek(w) {
           {label:"Plank",                reps:`3×${30+w*2}s`,         note:"" },
         ], cardio:null },
     ];
-  }
+  
   // ── PHASE 2: Build & Specificity (weeks 17–36) ────────────────────────────
   if(w<=36) {
     const wInPhase = w-16;
