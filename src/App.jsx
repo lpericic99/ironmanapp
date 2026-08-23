@@ -18,7 +18,21 @@ function makeWeek(w) {
   const isOWSummer = w<=16 || w>=46;
 
   // ── PHASE 1: Foundation & Fat Loss (weeks 1–16) ── ALL SUMMER / OW ────────
- return [
+  if(w<=16) {
+    const isRecovery = w%4===0;
+    const swimMin = [18,22,20,18,22,26,24,22,26,30,28,25,30,34,32,28][w-1];
+    const runRatio = w<=4?"2min run / 1min walk × 13 rounds":w<=8?"3min run / 1min walk × 11 rounds":w<=12?"5min run / 1min walk × 9 rounds":"8min run / 1min walk × 7 rounds";
+    const runMin   = isRecovery?30: w<=4?40:w<=8?45:w<=12?50:55;
+    const midBike  = isRecovery?50: w<=4?65:w<=8?75:w<=12?85:90;
+    const longBike = isRecovery?60: w<=4?75:w<=8?90:w<=12?105:120;
+    const squat  = 110 + Math.floor((w-1)/2)*2;
+    const rdl    = 90  + Math.floor((w-1)/2)*2;
+    const bench  = 85  + Math.floor((w-1)/2)*2;
+    const dl     = 130 + Math.floor((w-1)/2)*2;
+    const hipThr = 90  + Math.floor((w-1)/2)*2;
+    const pullW  = w<=8?0:5+Math.floor((w-9)/2)*2;
+
+    return [
       { id:"mon-str", day:"Mon", time:"Evening", type:"strength", icon:"🏋️",
         title:`Strength B — Lower Body${isRecovery?" (Recovery)":""}`,
         sets:[
@@ -103,7 +117,10 @@ function makeWeek(w) {
           {label:"Plank",                reps:`3×${30+w*2}s`,         note:"" },
         ], cardio:null },
     ];
-  
+  }
+
+  // ── PHASE 2: Build & Specificity (weeks 17–36) ────────────────────────────
+  if(w<=36) {
   // ── PHASE 2: Build & Specificity (weeks 17–36) ────────────────────────────
   if(w<=36) {
     const wInPhase = w-16;
