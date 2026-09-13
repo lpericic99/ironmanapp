@@ -151,22 +151,14 @@ function makeWeek(w) {
         sets:[], cardio:{label:"Total duration", unit:"min", placeholder:String(runMin), note:runRatio} },
 
       { id:"thu-bik", day:"Thu", time:"Evening", type:"bike", icon:"🚴",
-        title:`Zone 2 Bike${w<=8?" + Core":w<=12?" + StairMaster":" + Core"}`,
-        sets: w<=8?[
-          {label:"Dead bug",   reps:"3×12",  note:"Slow, controlled"},
-          {label:"Bird dog",   reps:"3×12",  note:"Each side"},
-          {label:"Side plank", reps:"2×30s", note:"Each side"},
-          {label:"Hip bridge", reps:"3×15",  note:""},
-        ]:w<=12?[]:[
-          {label:"Dead bug",     reps:"3×12",  note:""},
-          {label:"Pallof press", reps:"3×12",  note:"Each side"},
-          {label:"Side plank",   reps:"3×40s", note:"Each side"},
-          {label:"Hip bridge",   reps:"3×20",  note:""},
+        title:`Zone 2 Bike${w<=8?" + Easy Run":w<=12?" + StairMaster":" + Easy Run"}`,
+        sets: w<=12?[]:[
+          {label:"Easy run off the bike", reps:"10-15 min", note:"Straight after the ride, no pace target"},
         ],
         cardio:{label:w<=8?"Ride duration":w<=12?"Bike + Stair (min)":"Ride duration", unit:"min",
           placeholder:w<=12?"55":String(midBike),
           note:w<=8?"Full Zone 2 — can hold a full conversation":w<=12?"35min bike then 20min StairMaster (55 min total)":"Zone 2 steady — HR stays conversational"} },
-
+      
       { id:"fri-swm", day:"Fri", time:"Morning", type:"swim", icon:"🏊",
         title:`OW Swim — ${w<=4?"Technique":w<=8?"Form Focus":w<=12?"Building Pace":"Threshold Intro"} Wk${w}`,
         sets: w<=4?[
