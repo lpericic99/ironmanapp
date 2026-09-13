@@ -747,7 +747,7 @@ const toggleMorningCore = () => {
   };
 
   const style = ts ? (TYPE_STYLE[ts.type]||TYPE_STYLE.rest) : TYPE_STYLE.rest;
-  const today = new Date();
+ today = new Date();
   const altWorkout = NO_EQUIPMENT_WORKOUTS[altType];
 
   return (
