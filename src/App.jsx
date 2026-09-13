@@ -473,10 +473,17 @@ function getSchedKey(w) { return Math.min(63, Math.max(1, w)); }
 
 // Week calculation from training start date
 const TRAINING_START = new Date("2026-06-08");
+
 function getCurrentTrainingWeek() {
   const now = new Date();
-  const diff = now - TRAINING_START;
-  const week = Math.floor(diff / (1000*60*60*24*7)) + 1;
+  // Strip time components to compare calendar days in local time
+  const todayLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startLocal = new Date(TRAINING_START.getFullYear(), TRAINING_START.getMonth(), TRAINING_START.getDate());
+  
+  const diffTime = todayLocal - startLocal;
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  const week = Math.floor(diffDays / 7) + 1;
+  
   return Math.min(63, Math.max(1, week));
 }
 
