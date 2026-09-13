@@ -761,7 +761,7 @@ const toggleMorningCore = () => {
 
       <div style={{padding:"14px 16px"}}>
         <DashboardStrip currentWeek={currentWeek}/>
-
+ <MorningCoreCard completedToday={morningCoreDone} onToggleComplete={toggleMorningCore} />
         <button onClick={()=>setShowRetro(true)}
           style={{width:"100%",background:"rgba(245,158,11,0.08)",border:"1px solid #92400e",borderRadius:10,padding:"9px 14px",marginBottom:12,display:"flex",alignItems:"center",gap:10,cursor:"pointer",textAlign:"left"}}>
           <span style={{fontSize:18}}>📝</span>
