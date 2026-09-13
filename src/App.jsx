@@ -471,12 +471,18 @@ function sessionKey(week, id) { return `im_w${week}_${id}`; }
 function getPhase(w) { return PHASES.find(p => w >= p.weeks[0] && w <= p.weeks[1]) || PHASES[0]; }
 function getSchedKey(w) { return Math.min(63, Math.max(1, w)); }
 
-// Week calculation from training start date
-const TRAINING_START = new Date("2026-06-08");
+const TRAINING_START = new Date("2026-06-08T00:00:00");
+
 function getCurrentTrainingWeek() {
   const now = new Date();
-  const diff = now - TRAINING_START;
-  const week = Math.floor(diff / (1000*60*60*24*7)) + 1;
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfTrainingStart = new Date(
+    TRAINING_START.getFullYear(),
+    TRAINING_START.getMonth(),
+    TRAINING_START.getDate()
+  );
+  const diffDays = Math.round((startOfToday - startOfTrainingStart) / (1000 * 60 * 60 * 24));
+  const week = Math.floor(diffDays / 7) + 1;
   return Math.min(63, Math.max(1, week));
 }
 
