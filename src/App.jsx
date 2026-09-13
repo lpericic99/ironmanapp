@@ -8,6 +8,100 @@ const PHASES = [
   { id: 3, name: "Race Volume",           short: "Volume",     weeks: [37,56], color: "#f59e0b", dim: "#451a03", range: "Mar–Jul 2027" },
   { id: 4, name: "Taper & Peak",          short: "Taper",      weeks: [57,63], color: "#8b5cf6", dim: "#2e1065", range: "Aug–Sep 2027" },
 ];
+// ─── MORNING CORE ROUTINE ─────────────────────────────────────────────────────
+// Standalone, always-available — not tied to any training day or week number.
+// Paste this in as its own block, then render <MorningCoreCard/> wherever you
+// want it on the Today screen (e.g. above or below the scheduled session card).
+// It shows every single day regardless of what's on the training schedule.
+
+const MORNING_CORE = {
+  id: "morning-core",
+  title: "Morning Core — Out of Bed",
+  duration: "7–10 min",
+  note: "Do this before coffee, before checking your phone. Same core work that used to live inside your gym days — just moved so it doesn't drag out an already-long session.",
+  mobility: [
+    {label:"Cat-Cow",            reps:"8–10 reps",     note:"Slow, controlled — wakes up the spine"},
+    {label:"Hip Flexor Stretch", reps:"30s each side", note:"Kneeling lunge, push hips forward gently"},
+  ],
+  core: [
+    {label:"Dead Bug",     reps:"3×10 each side",     note:"Slow, controlled — the one that matters most for your long intervals"},
+    {label:"Bird Dog",     reps:"3×10 each side",     note:"Anti-rotation — directly targets the compensation pattern showing up late in your runs"},
+    {label:"Plank",        reps:"3×45–60s",           note:"Build toward this as a target hold time"},
+    {label:"Side Plank",   reps:"2×20–30s each side", note:""},
+    {label:"Glute Bridge", reps:"3×12–15",            note:"Glute activation — reduces lower-back compensation"},
+  ],
+};
+
+function MorningCoreCard({ completedToday, onToggleComplete }) {
+  return (
+    <div style={{
+      background: "#111827",
+      border: "1px solid #1f2937",
+      borderRadius: 12,
+      padding: "14px 16px",
+      marginBottom: 16,
+    }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: "#f9fafb" }}>
+            🌅 {MORNING_CORE.title}
+          </div>
+          <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>
+            {MORNING_CORE.duration}
+          </div>
+        </div>
+        <button
+          onClick={onToggleComplete}
+          style={{
+            background: completedToday ? "#16a34a" : "#374151",
+            color: "#fff",
+            border: "none",
+            borderRadius: 8,
+            padding: "6px 12px",
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: "pointer",
+          }}
+        >
+          {completedToday ? "✓ Done" : "Mark Done"}
+        </button>
+      </div>
+
+      <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 8, lineHeight: 1.4 }}>
+        {MORNING_CORE.note}
+      </div>
+
+      <div style={{ marginTop: 12 }}>
+        <div style={{ fontSize: 11, color: "#6b7280", fontWeight: 600, marginBottom: 6 }}>
+          MOBILITY (do first)
+        </div>
+        {MORNING_CORE.mobility.map((ex, i) => (
+          <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: "1px solid #1f2937" }}>
+            <span style={{ fontSize: 13, color: "#e5e7eb" }}>{ex.label}</span>
+            <span style={{ fontSize: 12, color: "#9ca3af" }}>{ex.reps}</span>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ marginTop: 10 }}>
+        <div style={{ fontSize: 11, color: "#6b7280", fontWeight: 600, marginBottom: 6 }}>
+          CORE
+        </div>
+        {MORNING_CORE.core.map((ex, i) => (
+          <div key={i} style={{ padding: "4px 0", borderBottom: "1px solid #1f2937" }}>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span style={{ fontSize: 13, color: "#e5e7eb" }}>{ex.label}</span>
+              <span style={{ fontSize: 12, color: "#9ca3af" }}>{ex.reps}</span>
+            </div>
+            {ex.note && (
+              <div style={{ fontSize: 11, color: "#6b7280", marginTop: 1 }}>{ex.note}</div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 // ─── WEEK-BY-WEEK SCHEDULES ───────────────────────────────────────────────────
 // Replace your entire existing makeWeek function with this one.
