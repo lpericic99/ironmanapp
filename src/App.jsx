@@ -137,7 +137,7 @@ function makeWeek(w) {
           {label:"Leg Curl",              reps:"3×12",                 note:"Hamstring isolation" },
           {label:"Calf Raise",            reps:"4×15",                 note:"Critical at your bodyweight" },
           {label:"Hanging Leg Raise",     reps:"3×12",                 note:"Core" },
-          {label:"Side Plank",            reps:`3×${25+w}s`,           note:"Each side" },
+          
         ], cardio:null },
 
       { id:"tue-swm", day:"Tue", time:"Morning", type:"swim", icon:"🏊",
@@ -200,7 +200,7 @@ function makeWeek(w) {
           {label:"Tricep Pushdown",      reps:"3×12",                 note:"" },
           {label:"Dumbbell Curl",        reps:"3×12",                 note:"" },
           {label:"Face Pull",            reps:"3×15",                 note:"Rear delt + rotator cuff" },
-          {label:"Plank",                reps:`3×${30+w*2}s`,         note:"" },
+          
         ], cardio:null },
     ];
   }
