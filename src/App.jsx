@@ -635,8 +635,10 @@ const STRETCH_ROUTINES = {
 // ─── TODAY ────────────────────────────────────────────────────────────────────
 
 function TodayView({ currentWeek, setCurrentWeek, onPR }) {
-  const dayNames = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-  const todayName = dayNames[new Date().getDay()];
+// Replace the current day lookup in TodayView:
+const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const today = new Date();
+const todayName = dayNames[today.getDay()];
   const phase = getPhase(currentWeek);
   const schedule = WEEK_SCHEDULES[getSchedKey(currentWeek)];
   const ts = schedule.find(s => s.day === todayName);
