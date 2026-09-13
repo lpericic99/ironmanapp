@@ -471,18 +471,12 @@ function sessionKey(week, id) { return `im_w${week}_${id}`; }
 function getPhase(w) { return PHASES.find(p => w >= p.weeks[0] && w <= p.weeks[1]) || PHASES[0]; }
 function getSchedKey(w) { return Math.min(63, Math.max(1, w)); }
 
-const TRAINING_START = new Date("2026-06-08T00:00:00");
-
+// Week calculation from training start date
+const TRAINING_START = new Date("2026-06-08");
 function getCurrentTrainingWeek() {
   const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const startOfTrainingStart = new Date(
-    TRAINING_START.getFullYear(),
-    TRAINING_START.getMonth(),
-    TRAINING_START.getDate()
-  );
-  const diffDays = Math.round((startOfToday - startOfTrainingStart) / (1000 * 60 * 60 * 24));
-  const week = Math.floor(diffDays / 7) + 1;
+  const diff = now - TRAINING_START;
+  const week = Math.floor(diff / (1000*60*60*24*7)) + 1;
   return Math.min(63, Math.max(1, week));
 }
 
@@ -915,6 +909,69 @@ const toggleMorningCore = () => {
                   )}
                 </div>
 
+                <button onClick={()=>saveTravelMode("alternative",{altType,altSetDone,altCardio})}
+                  style={{width:"100%",background:travelSaved?"#14532d":"linear-gradient(135deg,#7c3aed,#4f46e5)",border:travelSaved?"1px solid #16a34a":"none",borderRadius:10,padding:"13px",color:travelSaved?"#86efac":"#fff",fontWeight:700,fontSize:14,cursor:"pointer"}}>
+                  {travelSaved ? "✓ Logged!" : "Log Alternative Workout ✓"}
+                </button>
+              </div>
+            )}
+
+            {travelMode === "custom" && (
+              <div>
+                <button onClick={()=>setTravelMode(null)} style={{background:"none",border:"none",color:"#64748b",fontSize:12,cursor:"pointer",padding:"0 0 10px",display:"flex",alignItems:"center",gap:4}}>‹ Back</button>
+                <div style={{fontSize:14,fontWeight:700,color:"#e2e8f0",marginBottom:4}}>✏️ Log your own workout</div>
+                <div style={{fontSize:12,color:"#64748b",marginBottom:12}}>Add whatever you did — exercises, sets, reps, weight.</div>
+
+                <div style={{background:"rgba(0,0,0,0.3)",borderRadius:12,padding:12,marginBottom:12}}>
+                  <div style={{fontSize:11,color:"#64748b",marginBottom:8,textTransform:"uppercase",letterSpacing:1}}>Add exercise</div>
+                  <input type="text" placeholder="Exercise name (e.g. Push-ups)"
+                    value={newExName} onChange={e=>setNewExName(e.target.value)}
+                    style={{width:"100%",background:"rgba(255,255,255,0.06)",border:"1px solid #334155",borderRadius:8,padding:"9px 12px",color:"#e2e8f0",fontSize:13,marginBottom:8,boxSizing:"border-box",fontFamily:"inherit"}}
+                  />
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr auto",gap:6}}>
+                    <input type="text" placeholder="Sets × reps"
+                      value={newExReps} onChange={e=>setNewExReps(e.target.value)}
+                      style={{background:"rgba(255,255,255,0.06)",border:"1px solid #334155",borderRadius:8,padding:"9px 10px",color:"#e2e8f0",fontSize:13,fontFamily:"inherit"}}
+                    />
+                    <input type="number" inputMode="decimal" placeholder="kg (opt)"
+                      value={newExKg} onChange={e=>setNewExKg(e.target.value)}
+                      style={{background:"rgba(255,255,255,0.06)",border:"1px solid #334155",borderRadius:8,padding:"9px 10px",color:"#e2e8f0",fontSize:13,fontFamily:"inherit"}}
+                    />
+                    <button onClick={addCustomExercise}
+                      style={{background:"#7c3aed",border:"none",borderRadius:8,padding:"9px 14px",color:"#fff",fontWeight:700,fontSize:16,cursor:"pointer"}}>+</button>
+                  </div>
+                </div>
+
+                {customExercises.length > 0 && (
+                  <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:12}}>
+                    {customExercises.map((ex,i)=>(
+                      <div key={ex.id} style={{background:"rgba(124,58,237,0.1)",border:"1px solid #4c1d95",borderRadius:10,padding:"10px 12px",display:"flex",alignItems:"center",gap:10}}>
+                        <div style={{flex:1}}>
+                          <div style={{fontSize:13,fontWeight:600}}>{ex.name}</div>
+                          <div style={{fontSize:11,color:"#7c3aed",marginTop:1}}>
+                            {ex.reps}{ex.kg?` · ${ex.kg}kg`:""}
+                          </div>
+                        </div>
+                        <button onClick={()=>removeCustomEx(ex.id)}
+                          style={{background:"none",border:"none",color:"#4c1d95",fontSize:16,cursor:"pointer",padding:"2px 6px"}}>✕</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {customExercises.length > 0 && (
+                  <button onClick={()=>saveTravelMode("custom",{customExercises})}
+                    style={{width:"100%",background:travelSaved?"#14532d":"linear-gradient(135deg,#7c3aed,#4f46e5)",border:travelSaved?"1px solid #16a34a":"none",borderRadius:10,padding:"13px",color:travelSaved?"#86efac":"#fff",fontWeight:700,fontSize:14,cursor:"pointer"}}>
+                    {travelSaved ? "✓ Saved!" : "Save Custom Workout ✓"}
+                  </button>
+                )}
+                {customExercises.length === 0 && (
+                  <div style={{textAlign:"center",padding:"20px 0",color:"#334155",fontSize:13}}>Add your first exercise above ↑</div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {mode === "normal" && (
           !ts ? (
@@ -998,71 +1055,6 @@ const toggleMorningCore = () => {
               )}
             </div>
 
-
-                <button onClick={()=>saveTravelMode("alternative",{altType,altSetDone,altCardio})}
-                  style={{width:"100%",background:travelSaved?"#14532d":"linear-gradient(135deg,#7c3aed,#4f46e5)",border:travelSaved?"1px solid #16a34a":"none",borderRadius:10,padding:"13px",color:travelSaved?"#86efac":"#fff",fontWeight:700,fontSize:14,cursor:"pointer"}}>
-                  {travelSaved ? "✓ Logged!" : "Log Alternative Workout ✓"}
-                </button>
-              </div>
-            )}
-
-            {travelMode === "custom" && (
-              <div>
-                <button onClick={()=>setTravelMode(null)} style={{background:"none",border:"none",color:"#64748b",fontSize:12,cursor:"pointer",padding:"0 0 10px",display:"flex",alignItems:"center",gap:4}}>‹ Back</button>
-                <div style={{fontSize:14,fontWeight:700,color:"#e2e8f0",marginBottom:4}}>✏️ Log your own workout</div>
-                <div style={{fontSize:12,color:"#64748b",marginBottom:12}}>Add whatever you did — exercises, sets, reps, weight.</div>
-
-                <div style={{background:"rgba(0,0,0,0.3)",borderRadius:12,padding:12,marginBottom:12}}>
-                  <div style={{fontSize:11,color:"#64748b",marginBottom:8,textTransform:"uppercase",letterSpacing:1}}>Add exercise</div>
-                  <input type="text" placeholder="Exercise name (e.g. Push-ups)"
-                    value={newExName} onChange={e=>setNewExName(e.target.value)}
-                    style={{width:"100%",background:"rgba(255,255,255,0.06)",border:"1px solid #334155",borderRadius:8,padding:"9px 12px",color:"#e2e8f0",fontSize:13,marginBottom:8,boxSizing:"border-box",fontFamily:"inherit"}}
-                  />
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr auto",gap:6}}>
-                    <input type="text" placeholder="Sets × reps"
-                      value={newExReps} onChange={e=>setNewExReps(e.target.value)}
-                      style={{background:"rgba(255,255,255,0.06)",border:"1px solid #334155",borderRadius:8,padding:"9px 10px",color:"#e2e8f0",fontSize:13,fontFamily:"inherit"}}
-                    />
-                    <input type="number" inputMode="decimal" placeholder="kg (opt)"
-                      value={newExKg} onChange={e=>setNewExKg(e.target.value)}
-                      style={{background:"rgba(255,255,255,0.06)",border:"1px solid #334155",borderRadius:8,padding:"9px 10px",color:"#e2e8f0",fontSize:13,fontFamily:"inherit"}}
-                    />
-                    <button onClick={addCustomExercise}
-                      style={{background:"#7c3aed",border:"none",borderRadius:8,padding:"9px 14px",color:"#fff",fontWeight:700,fontSize:16,cursor:"pointer"}}>+</button>
-                  </div>
-                </div>
-
-                {customExercises.length > 0 && (
-                  <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:12}}>
-                    {customExercises.map((ex,i)=>(
-                      <div key={ex.id} style={{background:"rgba(124,58,237,0.1)",border:"1px solid #4c1d95",borderRadius:10,padding:"10px 12px",display:"flex",alignItems:"center",gap:10}}>
-                        <div style={{flex:1}}>
-                          <div style={{fontSize:13,fontWeight:600}}>{ex.name}</div>
-                          <div style={{fontSize:11,color:"#7c3aed",marginTop:1}}>
-                            {ex.reps}{ex.kg?` · ${ex.kg}kg`:""}
-                          </div>
-                        </div>
-                        <button onClick={()=>removeCustomEx(ex.id)}
-                          style={{background:"none",border:"none",color:"#4c1d95",fontSize:16,cursor:"pointer",padding:"2px 6px"}}>✕</button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {customExercises.length > 0 && (
-                  <button onClick={()=>saveTravelMode("custom",{customExercises})}
-                    style={{width:"100%",background:travelSaved?"#14532d":"linear-gradient(135deg,#7c3aed,#4f46e5)",border:travelSaved?"1px solid #16a34a":"none",borderRadius:10,padding:"13px",color:travelSaved?"#86efac":"#fff",fontWeight:700,fontSize:14,cursor:"pointer"}}>
-                    {travelSaved ? "✓ Saved!" : "Save Custom Workout ✓"}
-                  </button>
-                )}
-                {customExercises.length === 0 && (
-                  <div style={{textAlign:"center",padding:"20px 0",color:"#334155",fontSize:13}}>Add your first exercise above ↑</div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-            
             {skey && <RPELogger sessionKey={skey} />}
             {skey && <WeatherLog sessionKeyStr={skey} />}
             <textarea
