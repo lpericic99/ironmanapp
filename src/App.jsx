@@ -649,6 +649,18 @@ function TodayView({ currentWeek, setCurrentWeek, onPR }) {
   const [postponedTo, setPostponedTo]     = useState("");
   const [travelSaved, setTravelSaved]     = useState(false);
 
+const [morningCoreDone, setMorningCoreDone] = useState(() => {
+  const todayKey = `morning-core-${new Date().toDateString()}`;
+  return LS.get(todayKey)?.done || false;
+});
+
+const toggleMorningCore = () => {
+  const todayKey = `morning-core-${new Date().toDateString()}`;
+  const newVal = !morningCoreDone;
+  setMorningCoreDone(newVal);
+  LS.set(todayKey, { done: newVal, completedAt: new Date().toISOString() });
+};
+  
   useEffect(() => {
     if(skey) {
       const data = LS.get(skey);
