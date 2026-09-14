@@ -205,13 +205,15 @@ function makeWeek(w) {
     ];
   }
 
-  // ── PHASE 2: Build & Specificity (weeks 17–36) ────────────────────────────
+// ── PHASE 2: Build & Specificity (weeks 17–36) ────────────────────────────
   if(w<=36) {
     const wInPhase = w-16;
     const isRecovery = wInPhase%4===0;
+    const isBikeWeek = wInPhase%2===0;
+    const isFatigueLongRunWeek = wInPhase%4===3; // every 4th week, the week before recovery
     const swimM      = isRecovery ? 1600 : Math.min(2600, 1800+wInPhase*60);
     const longBikeKm = isRecovery ? 60   : Math.min(120, 55+wInPhase*4);
-    const runMin     = isRecovery ? 45   : Math.min(90, 45+wInPhase*3);
+    const runMin      = isRecovery ? 45   : Math.min(90, 45+wInPhase*3);
     const brickTotal = isRecovery ? 90   : Math.min(185, 100+wInPhase*5);
     const dl     = Math.min(165, 148+Math.floor(wInPhase/2));
     const bench  = Math.min(108, 100+Math.floor(wInPhase/3));
@@ -221,17 +223,16 @@ function makeWeek(w) {
 
     return [
       { id:"mon-str", day:"Mon", time:"Evening", type:"strength", icon:"🏋️",
-        title:`Strength — Upper Body${isRecovery?" (Recovery)":""}`,
+        title:`Strength — Lower Body${isRecovery?" (Recovery)":""}`,
         sets:[
-          {label:"Weighted Pull-ups", reps:`4×${isRecovery?3:5}`,  note:`+${pullW}kg` },
-          {label:"Bench Press",       reps:`4×${isRecovery?3:5}`,  note:`~${bench}kg` },
-          {label:"Overhead Press",    reps:`3×${isRecovery?5:6}`,  note:"Strict" },
-          {label:"Cable Row",         reps:`3×${isRecovery?6:8}`,  note:"Heavy" },
-          {label:"Dumbbell Bench",    reps:`3×${isRecovery?8:10}`, note:"Full range" },
-          {label:"Lateral Raise",     reps:"3×15",                 note:"Side delts" },
-          {label:"Skull Crusher",     reps:"3×10",                 note:"Triceps" },
-          {label:"Hammer Curl",       reps:"3×12",                 note:"Biceps + forearms" },
-          {label:"Face Pull",         reps:"3×15",                 note:"Shoulder health" },
+          {label:"Back Squat",            reps:`3×${isRecovery?3:5}`,  note:`~${squat}kg` },
+          {label:"Deadlift",              reps:`3×${isRecovery?3:5}`,  note:`~${dl}kg` },
+          {label:"Bulgarian Split Squat", reps:`3×${isRecovery?6:8}`,  note:"Each leg" },
+          {label:"Hip Thrust",            reps:`3×${isRecovery?8:10}`, note:`~${hipThr}kg` },
+          {label:"Nordic Curl",           reps:`3×${isRecovery?4:6}`,  note:"Hamstring injury prevention" },
+          {label:"Single-Leg Calf Raise", reps:"3×12",                 note:"Each leg" },
+          {label:"Pallof Press",          reps:"3×12",                 note:"Each side — anti-rotation" },
+          {label:"Hanging Leg Raise",     reps:"3×15",                 note:"" },
         ], cardio:null },
 
       { id:"tue-swm", day:"Tue", time:"Morning", type:"swim", icon:"🏊",
@@ -249,33 +250,46 @@ function makeWeek(w) {
         sets:[], cardio:{label:"Bike + Run total", unit:"min", placeholder:String(brickTotal),
           note:isRecovery?`Easy brick — ${Math.round(brickTotal*0.75)}min bike + ${Math.round(brickTotal*0.25)}min run`:`${Math.round(brickTotal*0.78)}min bike + ${Math.round(brickTotal*0.22)}min run — no break between`} },
 
-      { id:"thu-str", day:"Thu", time:"Evening", type:"strength", icon:"🏋️",
-        title:`Strength — Lower Body${isRecovery?" (Recovery)":""}`,
-        sets:[
-          {label:"Back Squat",            reps:`3×${isRecovery?3:5}`,  note:`~${squat}kg` },
-          {label:"Deadlift",              reps:`3×${isRecovery?3:5}`,  note:`~${dl}kg` },
-          {label:"Bulgarian Split Squat", reps:`3×${isRecovery?6:8}`,  note:"Each leg" },
-          {label:"Hip Thrust",            reps:`3×${isRecovery?8:10}`, note:`~${hipThr}kg` },
-          {label:"Nordic Curl",           reps:`3×${isRecovery?4:6}`,  note:"Hamstring injury prevention" },
-          {label:"Single-Leg Calf Raise", reps:"3×12",                 note:"Each leg" },
-          {label:"Pallof Press",          reps:"3×12",                 note:"Each side — anti-rotation" },
-          {label:"Hanging Leg Raise",     reps:"3×15",                 note:"" },
-        ], cardio:null },
-
-      { id:"fri-run", day:"Fri", time:"Morning", type:"run", icon:"🏃",
+      { id:"thu-run", day:"Thu", time:"Morning", type:"run", icon:"🏃",
         title:`Run — ${wInPhase<=8?"Building to 10K":wInPhase<=16?"10K Consolidation":"Half Marathon Build"} Wk${w}`,
         sets:[], cardio:{label:"Duration", unit:"min", placeholder:String(runMin),
           note:isRecovery?"Easy Zone 2 — short and relaxed":wInPhase<=8?"Continuous Zone 2 — building to 10K":wInPhase<=16?"10K at comfortable pace":"Building toward half marathon distance"} },
+
+      { id:"fri-rst", day:"Fri", time:"—", type:"rest", icon:"😴",
+        title:"Rest Day",
+        sets:[], cardio:null },
 
       { id:"sat-bik", day:"Sat", time:"Morning", type:"bike", icon:"🚴",
         title:`Long Ride — ${longBikeKm}km`,
         sets:[], cardio:{label:"Distance", unit:"km", placeholder:String(longBikeKm),
           note:isRecovery?"Easy recovery ride":"Zone 2 steady — eat every 40min, hydrate well"} },
 
-      { id:"sun-run", day:"Sun", time:"Morning", type:"run", icon:"🏃",
-        title:`Long Run — ${Math.round(runMin*0.8)}min Easy`,
-        sets:[], cardio:{label:"Duration", unit:"min", placeholder:String(Math.round(runMin*0.8)),
-          note:"Legs heavy from Saturday ride — run slow, that's the point. Race simulation."} },
+      isFatigueLongRunWeek
+        ? { id:"sun-run", day:"Sun", time:"Morning", type:"run", icon:"🏃",
+            title:`Long Run — ${Math.round(runMin*0.8)}min Easy`,
+            sets:[], cardio:{label:"Duration", unit:"min", placeholder:String(Math.round(runMin*0.8)),
+              note:"Legs heavy from Saturday ride — run slow, that's the point. Race simulation."} }
+        : { id:"sun-str", day:"Sun", time:"Morning", type:"strength", icon:"🏋️",
+            title:`Strength — Upper Body${isRecovery?" (Recovery)":""}${isRecovery?"":` + ${isBikeWeek?"Bike":"Run"} VO2max`}`,
+            sets:[
+              {label:"Weighted Pull-ups", reps:`4×${isRecovery?3:5}`,  note:`+${pullW}kg` },
+              {label:"Bench Press",       reps:`4×${isRecovery?3:5}`,  note:`~${bench}kg` },
+              {label:"Overhead Press",    reps:`3×${isRecovery?5:6}`,  note:"Strict" },
+              {label:"Cable Row",         reps:`3×${isRecovery?6:8}`,  note:"Heavy" },
+              {label:"Dumbbell Bench",    reps:`3×${isRecovery?8:10}`, note:"Full range" },
+              {label:"Lateral Raise",     reps:"3×15",                 note:"Side delts" },
+              {label:"Skull Crusher",     reps:"3×10",                 note:"Triceps" },
+              {label:"Hammer Curl",       reps:"3×12",                 note:"Biceps + forearms" },
+              {label:"Face Pull",         reps:"3×15",                 note:"Shoulder health" },
+            ],
+            cardio: isRecovery ? null : {
+              label: isBikeWeek ? "Bike intervals" : "Run intervals",
+              unit: "min",
+              placeholder: "35",
+              note: isBikeWeek
+                ? "10min warm-up, 5-6×3-4min hard w/ 3min easy spin recovery, 10min cool-down. Do this before strength."
+                : "10min warm-up, 5-6×3min hard (~5K effort) w/ 2-3min easy jog recovery, 10min cool-down. Do this before strength."
+            } },
     ];
   }
 
